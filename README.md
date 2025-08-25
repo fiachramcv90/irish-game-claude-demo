@@ -1,69 +1,63 @@
-# React + TypeScript + Vite
+# Irish Language Learning Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A collection of interactive mini-games to help teach Irish (Gaeilge) to young learners, focusing on Ulster Irish pronunciation and vocabulary.
 
-Currently, two official plugins are available:
+## 🎮 Game Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Card Matching Games**: Learn colors and animals in Irish
+- **Letter Recognition**: Interactive Irish alphabet with pronunciation
+- **Sound Games**: Audio-based learning for proper pronunciation
+- **Progressive Difficulty**: Games adapt as skills improve
+- **Mobile & Desktop**: Responsive design for all devices
 
-## Expanding the ESLint configuration
+## 🏗️ Architecture
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+This React TypeScript application is built with:
+- **Frontend**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development
+- **State Management**: Local state with React hooks
+- **Storage**: Local storage for progress tracking
+- **Audio**: HTML5 Audio API for pronunciation
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Project Structure
+```
+src/
+├── components/
+│   ├── games/          # Individual mini-game components
+│   └── ui/            # Reusable UI components  
+├── data/              # Irish vocabulary and game data
+├── hooks/             # Custom React hooks
+├── types/             # TypeScript type definitions
+├── utils/             # Helper functions
+└── assets/
+    ├── audio/         # Irish pronunciation files
+    └── images/        # Game assets and illustrations
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚀 Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Install dependencies
+npm install
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
 ```
+
+## 🎯 Development Roadmap
+
+This project will be developed in phases:
+1. **Architecture & Planning**: Detailed design and GitHub issues
+2. **Core App Shell**: Navigation and game selection
+3. **Card Matching Game**: Colors and animals vocabulary
+4. **Letter Recognition Game**: Irish alphabet learning
+5. **Sound Games**: Pronunciation practice
+6. **Progress Tracking**: Local storage implementation
+7. **Polish & Testing**: UI improvements and testing
+
+## 📝 Contributing
+
+All development tasks are tracked as GitHub issues. Each feature is broken down into small, manageable stories for systematic development.
