@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -7,13 +7,15 @@ export default defineConfig({
   build: {
     // Optimize for production
     target: 'es2020',
-    minify: 'esbuild',
+    minify: 'terser',
     sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
           // Separate vendor chunks for better caching
           vendor: ['react', 'react-dom'],
+          // Keep game logic separate for lazy loading
+          utils: ['./src/utils', './src/types'],
         },
       },
     },

@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS for Irish Learning Game */
+@layer base {
+  :root {
+    font-family: 'Nunito', system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    /* Child-friendly light theme by default */
+    color: theme('colors.dark-gray');
+    background-color: theme('colors.cream-white');
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: theme('colors.cream-white');
+  }
+
+  /* Large touch targets for mobile */
+  button,
+  [role='button'] {
+    min-height: theme('spacing.touch-target');
+    min-width: theme('spacing.touch-target');
+  }
+}
+
+@layer components {
+  /* Game-specific component styles */
+  .game-card {
+    @apply bg-white rounded-child shadow-lg border-2 border-soft-gray;
+    @apply transition-all duration-300 hover:shadow-xl hover:scale-105;
+    @apply cursor-pointer p-6;
+  }
+
+  .game-card.locked {
+    @apply bg-soft-gray border-gray-300 cursor-not-allowed;
+    @apply opacity-60;
+  }
+
+  .flip-card {
+    @apply w-20 h-20 rounded-child border-2 border-irish-green;
+    @apply flex items-center justify-center cursor-pointer;
+    @apply transition-transform duration-300;
+    @apply bg-white hover:bg-light-green;
+  }
+
+  .flip-card.flipped {
+    @apply bg-irish-green text-white;
+  }
+
+  .flip-card.matched {
+    @apply bg-bright-yellow border-bright-yellow;
+    @apply animate-celebration;
+  }
+
+  .btn-primary {
+    @apply bg-irish-green text-white font-bold py-3 px-6 rounded-child;
+    @apply hover:bg-green-600 transition-colors duration-200;
+    @apply focus:outline-none focus:ring-4 focus:ring-green-300;
+  }
+
+  .btn-secondary {
+    @apply bg-warm-orange text-white font-bold py-3 px-6 rounded-child;
+    @apply hover:bg-orange-600 transition-colors duration-200;
+    @apply focus:outline-none focus:ring-4 focus:ring-orange-300;
+  }
+
+  .progress-bar {
+    @apply w-full bg-soft-gray rounded-full h-4;
+  }
+
+  .progress-fill {
+    @apply bg-gradient-to-r from-irish-green to-sky-blue h-4 rounded-full;
+    @apply transition-all duration-500 ease-out;
+  }
+}
