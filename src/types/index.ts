@@ -339,7 +339,7 @@ export interface FlipCardProps {
   disabled?: boolean;
 }
 
-export interface ProgressBarProps {
+export interface ProgressBarProps extends React.HTMLAttributes<HTMLDivElement> {
   current: number;
   total: number;
   showLabel?: boolean;
