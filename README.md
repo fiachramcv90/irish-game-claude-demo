@@ -13,6 +13,7 @@ A collection of interactive mini-games to help teach Irish (Gaeilge) to young le
 ## 🏗️ Architecture
 
 This React TypeScript application is built with:
+
 - **Frontend**: React 18 with TypeScript
 - **Build Tool**: Vite for fast development
 - **State Management**: Local state with React hooks
@@ -20,11 +21,12 @@ This React TypeScript application is built with:
 - **Audio**: HTML5 Audio API for pronunciation
 
 ### Project Structure
+
 ```
 src/
 ├── components/
 │   ├── games/          # Individual mini-game components
-│   └── ui/            # Reusable UI components  
+│   └── ui/            # Reusable UI components
 ├── data/              # Irish vocabulary and game data
 ├── hooks/             # Custom React hooks
 ├── types/             # TypeScript type definitions
@@ -50,6 +52,7 @@ npm run build
 ## 🎯 Development Roadmap
 
 This project will be developed in phases:
+
 1. **Architecture & Planning**: Detailed design and GitHub issues
 2. **Core App Shell**: Navigation and game selection
 3. **Card Matching Game**: Colors and animals vocabulary
