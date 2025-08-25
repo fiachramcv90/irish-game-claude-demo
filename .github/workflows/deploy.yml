@@ -9,10 +9,10 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
-    
+
     # Only run if tests pass
     needs: []
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
