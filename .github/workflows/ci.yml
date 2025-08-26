@@ -144,14 +144,12 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy to Vercel (Preview)
-        uses: amondnet/vercel-action@v25
+      - name: Deploy to Vercel
+        uses: vercel/action@v35
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./
-          scope: ${{ secrets.VERCEL_ORG_ID }}
 
   deploy-production:
     name: Deploy Production
@@ -175,12 +173,10 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@v25
+      - name: Deploy to Vercel
+        uses: vercel/action@v35
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
-          working-directory: ./
-          scope: ${{ secrets.VERCEL_ORG_ID }}
