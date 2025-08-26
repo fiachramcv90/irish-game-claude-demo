@@ -26,7 +26,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+    <div
+      className='fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center'
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+    >
       {/* Backdrop */}
       <div
         className='absolute inset-0 bg-dark-gray/50 backdrop-blur-sm'
@@ -38,7 +41,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       <div
         className={cn(
           'relative mx-4 w-full max-w-md transform overflow-hidden rounded-child bg-cream-white p-6 shadow-xl transition-all',
-          'animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2'
+          'animate-fade-in-0'
         )}
         role='dialog'
         aria-modal='true'

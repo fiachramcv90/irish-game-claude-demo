@@ -31,11 +31,6 @@ export default {
       borderRadius: {
         child: '12px', // Child-friendly rounded corners
       },
-      animation: {
-        'card-flip': 'flip 0.6s ease-in-out',
-        celebration: 'celebration 0.8s ease-out',
-        shake: 'shake 0.5s ease-in-out',
-      },
       keyframes: {
         flip: {
           '0%': { transform: 'rotateY(0deg)' },

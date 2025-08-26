@@ -23,7 +23,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
       try {
         // Add a timeout to prevent infinite loading in tests
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Audio preload timeout')), 100);
+          setTimeout(() => reject(new Error('Audio preload timeout')), 50);
         });
 
         await Promise.race([
