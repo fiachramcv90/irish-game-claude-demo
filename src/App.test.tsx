@@ -1,72 +1,147 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect } from 'vitest';
 
 import App from './App';
 
 describe('App', () => {
-  it('renders the main heading', () => {
+  it('renders the welcome screen initially', async () => {
     render(<App />);
-    const heading = screen.getByRole('heading', {
-      name: /irish learning game/i,
+
+    await waitFor(() => {
+      const welcomeHeading = screen.getByRole('heading', { name: /fáilte!/i });
+      expect(welcomeHeading).toBeInTheDocument();
     });
-    expect(heading).toBeInTheDocument();
+
+    const welcomeText = screen.getByText(/welcome to irish learning/i);
+    expect(welcomeText).toBeInTheDocument();
   });
 
-  it('renders the design system demo description', () => {
+  it('navigates from welcome screen to main menu', async () => {
+    const user = userEvent.setup();
     render(<App />);
-    const description = screen.getByText(/design system component demo/i);
-    expect(description).toBeInTheDocument();
+
+    await waitFor(() => {
+      const continueButton = screen.getByRole('button', {
+        name: /start your adventure/i,
+      });
+      expect(continueButton).toBeInTheDocument();
+    });
+
+    const continueButton = screen.getByRole('button', {
+      name: /start your adventure/i,
+    });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      const mainMenuHeading = screen.getByRole('heading', {
+        name: /irish learning games/i,
+      });
+      expect(mainMenuHeading).toBeInTheDocument();
+    });
   });
 
-  it('renders button components section', () => {
+  it('shows game selection cards in main menu', async () => {
+    const user = userEvent.setup();
     render(<App />);
-    const buttonSection = screen.getByRole('heading', {
-      name: /button components/i,
+
+    // Navigate to main menu first
+    await waitFor(() => {
+      const continueButton = screen.getByRole('button', {
+        name: /start your adventure/i,
+      });
+      expect(continueButton).toBeInTheDocument();
     });
-    expect(buttonSection).toBeInTheDocument();
+
+    const continueButton = screen.getByRole('button', {
+      name: /start your adventure/i,
+    });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      const cardMatchingHeading = screen.getByRole('heading', {
+        name: /card matching/i,
+      });
+      const letterRecognitionHeading = screen.getByRole('heading', {
+        name: /letter recognition/i,
+      });
+      const soundGameHeading = screen.getByRole('heading', {
+        name: /sound game/i,
+      });
+
+      expect(cardMatchingHeading).toBeInTheDocument();
+      expect(letterRecognitionHeading).toBeInTheDocument();
+      expect(soundGameHeading).toBeInTheDocument();
+    });
   });
 
-  it('renders interactive buttons', () => {
+  it('opens settings modal from main menu', async () => {
+    const user = userEvent.setup();
     render(<App />);
-    const defaultButtons = screen.getAllByRole('button', {
-      name: /^default$/i,
+
+    // Navigate to main menu
+    await waitFor(() => {
+      const continueButton = screen.getByRole('button', {
+        name: /start your adventure/i,
+      });
+      expect(continueButton).toBeInTheDocument();
     });
-    const secondaryButton = screen.getByRole('button', {
-      name: /^secondary$/i,
+
+    const continueButton = screen.getByRole('button', {
+      name: /start your adventure/i,
     });
-    expect(defaultButtons).toHaveLength(2); // One for variant, one for size
-    expect(secondaryButton).toBeInTheDocument();
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      const settingsButton = screen.getByRole('button', { name: /settings/i });
+      expect(settingsButton).toBeInTheDocument();
+    });
+
+    const settingsButton = screen.getByRole('button', { name: /settings/i });
+    await user.click(settingsButton);
+
+    await waitFor(() => {
+      const settingsDialog = screen.getByRole('dialog');
+      expect(settingsDialog).toBeInTheDocument();
+    });
   });
 
-  it('renders game selection cards', () => {
+  it('can select and start a game', async () => {
+    const user = userEvent.setup();
     render(<App />);
-    const cardMatchingHeading = screen.getByRole('heading', {
-      name: /card matching/i,
-    });
-    const letterRecognitionHeading = screen.getByRole('heading', {
-      name: /letter recognition/i,
-    });
-    expect(cardMatchingHeading).toBeInTheDocument();
-    expect(letterRecognitionHeading).toBeInTheDocument();
-  });
 
-  it('renders play game buttons', () => {
-    render(<App />);
+    // Navigate to main menu
+    await waitFor(() => {
+      const continueButton = screen.getByRole('button', {
+        name: /start your adventure/i,
+      });
+      expect(continueButton).toBeInTheDocument();
+    });
+
+    const continueButton = screen.getByRole('button', {
+      name: /start your adventure/i,
+    });
+    await user.click(continueButton);
+
+    // Click on card matching game (which should be unlocked)
+    await waitFor(() => {
+      const playGameButtons = screen.getAllByRole('button', {
+        name: /play game/i,
+      });
+      expect(playGameButtons.length).toBeGreaterThan(0);
+    });
+
     const playGameButtons = screen.getAllByRole('button', {
       name: /play game/i,
     });
-    const lockedButton = screen.getByRole('button', { name: /locked/i });
-    expect(playGameButtons).toHaveLength(2); // Two unlocked games
-    expect(lockedButton).toBeInTheDocument(); // One locked game
-  });
+    await user.click(playGameButtons[0]); // Click first available game
 
-  it('renders interactive component buttons', () => {
-    render(<App />);
-    const openModalButton = screen.getByRole('button', { name: /open modal/i });
-    const testLoadingButton = screen.getByRole('button', {
-      name: /test loading/i,
+    // Should navigate to game placeholder screen
+    await waitFor(() => {
+      const gameScreen = screen.getByText(
+        /game will start here when implemented/i
+      );
+      expect(gameScreen).toBeInTheDocument();
     });
-    expect(openModalButton).toBeInTheDocument();
-    expect(testLoadingButton).toBeInTheDocument();
   });
 });
