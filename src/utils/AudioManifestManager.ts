@@ -3,6 +3,7 @@
  * Handles browser compatibility, fallback formats, and error handling
  */
 
+import { AUDIO_CONFIG } from '../constants/audio';
 import type {
   AudioManifest,
   AudioManifestFile,
@@ -52,7 +53,7 @@ export class AudioManifestManager {
    */
   private async loadManifestInternal(): Promise<AudioManifest> {
     try {
-      const response = await fetch('/src/data/audio-manifest.json');
+      const response = await fetch('/audio-manifest.json');
       if (!response.ok) {
         throw new Error(
           `Failed to load manifest: ${response.status} ${response.statusText}`
@@ -179,7 +180,7 @@ export class AudioManifestManager {
       const loadPromise = new Promise<HTMLAudioElement>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Audio loading timeout'));
-        }, 10000); // 10 second timeout
+        }, AUDIO_CONFIG.AUDIO_LOAD_TIMEOUT);
 
         audio.addEventListener(
           'canplaythrough',

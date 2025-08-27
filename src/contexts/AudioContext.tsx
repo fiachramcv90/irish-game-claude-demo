@@ -161,22 +161,28 @@ export function AudioProvider({ children }: AudioProviderProps) {
           return; // Already preloaded
         }
 
-        dispatch({
-          type: 'SET_LOADING_STATE',
-          id,
-          state: {
-            id,
-            url: `audio/${id}.mp3`,
-            isLoaded: false,
-            isLoading: true,
-          },
-        });
-
         try {
           // Initialize AudioManifestManager if needed
           if (!audioManifestManager.getManifest()) {
             await audioManifestManager.loadManifest();
           }
+
+          // Get file info to determine the actual URL
+          const fileInfo = audioManifestManager.getAudioFileById(id);
+          const fileUrl = fileInfo
+            ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
+            : `audio/${id}.mp3`;
+
+          dispatch({
+            type: 'SET_LOADING_STATE',
+            id,
+            state: {
+              id,
+              url: fileUrl,
+              isLoaded: false,
+              isLoading: true,
+            },
+          });
 
           // Try to load audio using AudioManifestManager
           const loadResult = await audioManifestManager.loadAudioFile(id);
@@ -193,19 +199,26 @@ export function AudioProvider({ children }: AudioProviderProps) {
             id,
             state: {
               id,
-              url: `audio/${id}.mp3`,
+              url: loadResult.fileUsed || fileUrl,
               isLoaded: true,
               isLoading: false,
             },
           });
         } catch (error) {
           console.error(`Failed to preload audio ${id}:`, error);
+
+          // Get file info for error state URL
+          const fileInfo = audioManifestManager.getAudioFileById(id);
+          const fileUrl = fileInfo
+            ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
+            : `audio/${id}.mp3`;
+
           dispatch({
             type: 'SET_LOADING_STATE',
             id,
             state: {
               id,
-              url: `audio/${id}.mp3`,
+              url: fileUrl,
               isLoaded: false,
               isLoading: false,
               error:
