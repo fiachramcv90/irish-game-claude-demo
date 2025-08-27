@@ -396,12 +396,22 @@
           },
           "duration": 0.4,
           "volume": 0.4
+        },
+        {
+          "id": "welcome",
+          "description": "Welcome screen greeting sound",
+          "files": {
+            "wav": "audio/ui/welcome.wav",
+            "mp3": "audio/ui/welcome.mp3"
+          },
+          "duration": 1.0,
+          "volume": 0.6
         }
       ]
     }
   },
   "validation": {
-    "totalFiles": 45,
+    "totalFiles": 48,
     "categories": 5,
     "checksum": "placeholder-dev-checksum",
     "integrityCheck": true

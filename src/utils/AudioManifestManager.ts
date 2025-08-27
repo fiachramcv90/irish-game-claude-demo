@@ -14,6 +14,7 @@ import type {
 
 export class AudioManifestManager {
   private manifest: AudioManifest | null = null;
+  private manifestPromise: Promise<AudioManifest> | null = null;
   private audioCache = new Map<string, HTMLAudioElement>();
   private loadedFiles = new Set<string>();
   private failedFiles = new Set<string>();
@@ -22,15 +23,43 @@ export class AudioManifestManager {
    * Load the audio manifest from the data directory
    */
   async loadManifest(): Promise<AudioManifest> {
+    // Return existing manifest if already loaded
+    if (this.manifest) {
+      return this.manifest;
+    }
+
+    // Return existing promise if loading is in progress
+    if (this.manifestPromise) {
+      return this.manifestPromise;
+    }
+
+    // Start loading manifest
+    this.manifestPromise = this.loadManifestInternal();
+
+    try {
+      const manifest = await this.manifestPromise;
+      this.manifest = manifest;
+      return manifest;
+    } catch (error) {
+      // Reset promise on failure so retry is possible
+      this.manifestPromise = null;
+      throw error;
+    }
+  }
+
+  /**
+   * Internal manifest loading logic
+   */
+  private async loadManifestInternal(): Promise<AudioManifest> {
     try {
       const response = await fetch('/src/data/audio-manifest.json');
       if (!response.ok) {
-        throw new Error(`Failed to load manifest: ${response.status}`);
+        throw new Error(
+          `Failed to load manifest: ${response.status} ${response.statusText}`
+        );
       }
 
-      this.manifest = await response.json();
       const manifest = (await response.json()) as AudioManifest;
-      this.manifest = manifest;
 
       console.log('📋 Audio manifest loaded successfully', {
         version: manifest.version,
@@ -108,7 +137,7 @@ export class AudioManifestManager {
     // If no supported format found, return the first available
     const availableFormats = Object.keys(files);
     return availableFormats.length > 0
-      ? files[availableFormats[0] as keyof AudioFileFormat]
+      ? files[availableFormats[0] as keyof AudioFileFormat] || null
       : null;
   }
 
