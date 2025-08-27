@@ -61,6 +61,67 @@ This project will be developed in phases:
 6. **Progress Tracking**: Local storage implementation
 7. **Polish & Testing**: UI improvements and testing
 
+## 🛠️ Development
+
+### Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run tests
+npm run test:run
+
+# Build for production
+npm run build
+```
+
+### Development Workflow
+
+All contributors must follow the standardized development workflow to ensure code quality and consistency:
+
+📋 **[View Complete Development Workflow](docs/DEVELOPMENT_WORKFLOW.md)**
+
+**Quick Checklist:**
+
+- [ ] Create feature branch from main
+- [ ] Follow task planning and analysis steps
+- [ ] Implement with comprehensive testing
+- [ ] Run all quality checks before committing
+- [ ] Create detailed pull request
+- [ ] Ensure all CI checks pass
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev                    # Start development server
+npm run build                  # Build for production
+npm run preview                # Preview production build
+
+# Code Quality
+npm run type-check             # TypeScript compilation
+npm run lint                   # ESLint checks
+npm run lint:fix              # Auto-fix ESLint issues
+npm run format                 # Format with Prettier
+npm run format:check          # Check formatting
+
+# Testing
+npm run test                   # Run tests in watch mode
+npm run test:run              # Run tests once
+npm run test:coverage         # Generate coverage report
+npx playwright test           # Run integration tests
+```
+
 ## 📝 Contributing
 
 All development tasks are tracked as GitHub issues. Each feature is broken down into small, manageable stories for systematic development.
+
+**Before contributing:**
+
+1. Read the [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md)
+2. Check existing issues and roadmap
+3. Follow the established coding standards and testing practices
