@@ -44,6 +44,52 @@ export interface AudioManagerEvents {
   onPause?: (audioId: string) => void;
   onStop?: (audioId: string) => void;
   onEnd?: (audioId: string) => void;
+  onPreloadStart?: (preloadId: string, totalItems: number) => void;
+  onPreloadProgress?: (
+    preloadId: string,
+    loaded: number,
+    total: number
+  ) => void;
+  onPreloadComplete?: (
+    preloadId: string,
+    successful: string[],
+    failed: string[]
+  ) => void;
+  onPreloadCancel?: (preloadId: string) => void;
+}
+
+export interface PreloadOptions {
+  priority?: 'high' | 'normal' | 'low';
+  maxConcurrent?: number;
+  retryAttempts?: number;
+  timeout?: number;
+}
+
+export interface PreloadProgress {
+  preloadId: string;
+  totalItems: number;
+  loadedItems: number;
+  failedItems: number;
+  currentlyLoading: string[];
+  completed: string[];
+  failed: string[];
+  cancelled: boolean;
+}
+
+export interface PreloadQueue {
+  id: string;
+  audioUrls: Record<string, string>;
+  options: PreloadOptions;
+  progress: PreloadProgress;
+  abortController: AbortController;
+  promise: Promise<PreloadResult>;
+}
+
+export interface PreloadResult {
+  preloadId: string;
+  successful: string[];
+  failed: Array<{ audioId: string; error: string }>;
+  cancelled: boolean;
 }
 
 export interface AudioManagerInterface {
@@ -57,6 +103,15 @@ export interface AudioManagerInterface {
   // Audio management
   unload(audioId: string): void;
   preload(audioUrls: Record<string, string>): Promise<void>;
+
+  // Enhanced preloading
+  preloadWithProgress(
+    audioUrls: Record<string, string>,
+    options?: PreloadOptions
+  ): Promise<PreloadResult>;
+  cancelPreload(preloadId: string): boolean;
+  getPreloadProgress(preloadId: string): PreloadProgress | undefined;
+  getAllPreloadProgress(): PreloadProgress[];
 
   // State queries
   isLoaded(audioId: string): boolean;

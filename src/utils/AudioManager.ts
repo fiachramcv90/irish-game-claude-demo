@@ -6,6 +6,10 @@ import type {
   AudioManagerConfig,
   AudioManagerEvents,
   AudioManagerInterface,
+  PreloadOptions,
+  PreloadProgress,
+  PreloadQueue,
+  PreloadResult,
 } from '../types/audio';
 
 /**
@@ -22,6 +26,8 @@ export class AudioManager implements AudioManagerInterface {
     ((...args: unknown[]) => void)[]
   >();
   private config: Required<AudioManagerConfig>;
+  private preloadQueues = new Map<string, PreloadQueue>();
+  private preloadCounter = 0;
 
   constructor(config: AudioManagerConfig = {}) {
     this.config = {
@@ -240,6 +246,248 @@ export class AudioManager implements AudioManagerInterface {
   }
 
   /**
+   * Preload multiple audio files with progress tracking
+   */
+  async preloadWithProgress(
+    audioUrls: Record<string, string>,
+    options: PreloadOptions = {}
+  ): Promise<PreloadResult> {
+    const preloadId = `preload_${++this.preloadCounter}`;
+    const audioEntries = Object.entries(audioUrls);
+
+    const defaultOptions: Required<PreloadOptions> = {
+      priority: options.priority ?? 'normal',
+      maxConcurrent: options.maxConcurrent ?? 3,
+      retryAttempts: options.retryAttempts ?? 1,
+      timeout: options.timeout ?? 10000,
+    };
+
+    const abortController = new AbortController();
+
+    const progress: PreloadProgress = {
+      preloadId,
+      totalItems: audioEntries.length,
+      loadedItems: 0,
+      failedItems: 0,
+      currentlyLoading: [],
+      completed: [],
+      failed: [],
+      cancelled: false,
+    };
+
+    const preloadPromise = this.executePreload(
+      preloadId,
+      audioEntries,
+      defaultOptions,
+      progress,
+      abortController
+    );
+
+    const preloadQueue: PreloadQueue = {
+      id: preloadId,
+      audioUrls,
+      options: defaultOptions,
+      progress,
+      abortController,
+      promise: preloadPromise,
+    };
+
+    this.preloadQueues.set(preloadId, preloadQueue);
+
+    // Emit preload start event
+    this.emit('onPreloadStart', preloadId, audioEntries.length);
+
+    try {
+      const result = await preloadPromise;
+      this.preloadQueues.delete(preloadId);
+      return result;
+    } catch (error) {
+      this.preloadQueues.delete(preloadId);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a preload operation
+   */
+  cancelPreload(preloadId: string): boolean {
+    const preloadQueue = this.preloadQueues.get(preloadId);
+    if (!preloadQueue) {
+      return false;
+    }
+
+    preloadQueue.abortController.abort();
+    preloadQueue.progress.cancelled = true;
+    this.emit('onPreloadCancel', preloadId);
+
+    // Clean up any partially loaded audio files from this preload
+    preloadQueue.progress.currentlyLoading.forEach(audioId => {
+      this.unload(audioId);
+    });
+
+    this.preloadQueues.delete(preloadId);
+    return true;
+  }
+
+  /**
+   * Get progress of a specific preload operation
+   */
+  getPreloadProgress(preloadId: string): PreloadProgress | undefined {
+    return this.preloadQueues.get(preloadId)?.progress;
+  }
+
+  /**
+   * Get progress of all active preload operations
+   */
+  getAllPreloadProgress(): PreloadProgress[] {
+    return Array.from(this.preloadQueues.values()).map(queue => queue.progress);
+  }
+
+  /**
+   * Execute preload operation with progress tracking and concurrency control
+   */
+  private async executePreload(
+    preloadId: string,
+    audioEntries: Array<[string, string]>,
+    options: Required<PreloadOptions>,
+    progress: PreloadProgress,
+    abortController: AbortController
+  ): Promise<PreloadResult> {
+    const result: PreloadResult = {
+      preloadId,
+      successful: [],
+      failed: [],
+      cancelled: false,
+    };
+
+    // Create semaphore for concurrency control
+    const semaphore = new Array(options.maxConcurrent).fill(null);
+    let semaphoreIndex = 0;
+
+    const loadAudioWithRetry = async (
+      audioId: string,
+      url: string
+    ): Promise<void> => {
+      if (abortController.signal.aborted) {
+        throw new Error('Preload cancelled');
+      }
+
+      progress.currentlyLoading.push(audioId);
+      this.emit(
+        'onPreloadProgress',
+        preloadId,
+        progress.loadedItems,
+        progress.totalItems
+      );
+
+      let lastError: Error | null = null;
+
+      for (let attempt = 0; attempt <= options.retryAttempts; attempt++) {
+        if (abortController.signal.aborted) {
+          throw new Error('Preload cancelled');
+        }
+
+        try {
+          // Create timeout promise
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), options.timeout);
+          });
+
+          // Race between load and timeout
+          await Promise.race([this.load(audioId, url), timeoutPromise]);
+
+          // Success
+          progress.currentlyLoading = progress.currentlyLoading.filter(
+            id => id !== audioId
+          );
+          progress.completed.push(audioId);
+          progress.loadedItems++;
+          result.successful.push(audioId);
+
+          this.emit(
+            'onPreloadProgress',
+            preloadId,
+            progress.loadedItems,
+            progress.totalItems
+          );
+          return;
+        } catch (error) {
+          lastError =
+            error instanceof Error ? error : new Error('Unknown error');
+
+          if (attempt < options.retryAttempts) {
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve =>
+              setTimeout(resolve, Math.pow(2, attempt) * 100)
+            );
+          }
+        }
+      }
+
+      // All retries failed
+      progress.currentlyLoading = progress.currentlyLoading.filter(
+        id => id !== audioId
+      );
+      progress.failed.push(audioId);
+      progress.failedItems++;
+      result.failed.push({
+        audioId,
+        error: lastError?.message || 'Unknown error',
+      });
+
+      this.emit(
+        'onPreloadProgress',
+        preloadId,
+        progress.loadedItems,
+        progress.totalItems
+      );
+    };
+
+    const processBatch = async (
+      entries: Array<[string, string]>
+    ): Promise<void> => {
+      const batchPromises = entries.map(async ([audioId, url]) => {
+        // Wait for semaphore slot
+        const slotIndex = semaphoreIndex++ % options.maxConcurrent;
+        await Promise.resolve(semaphore[slotIndex]);
+
+        try {
+          await loadAudioWithRetry(audioId, url);
+        } finally {
+          // Release semaphore slot
+          semaphore[slotIndex] = Promise.resolve();
+        }
+      });
+
+      await Promise.allSettled(batchPromises);
+    };
+
+    try {
+      await processBatch(audioEntries);
+
+      if (abortController.signal.aborted) {
+        result.cancelled = true;
+        progress.cancelled = true;
+      }
+
+      this.emit(
+        'onPreloadComplete',
+        preloadId,
+        result.successful,
+        result.failed.map(f => f.audioId)
+      );
+    } catch (error) {
+      if (abortController.signal.aborted) {
+        result.cancelled = true;
+        progress.cancelled = true;
+      }
+      throw error;
+    }
+
+    return result;
+  }
+
+  /**
    * Check if audio file is loaded
    */
   isLoaded(audioId: string): boolean {
@@ -395,10 +643,18 @@ export class AudioManager implements AudioManagerInterface {
    */
   destroy(): void {
     this.stopAll();
+
+    // Cancel all active preloads
+    Array.from(this.preloadQueues.keys()).forEach(preloadId => {
+      this.cancelPreload(preloadId);
+    });
+
     this.audioFiles.forEach((_audioFile, audioId) => {
       this.unload(audioId);
     });
+
     this.eventListeners.clear();
+    this.preloadQueues.clear();
   }
 
   /**
