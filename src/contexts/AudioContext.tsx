@@ -113,17 +113,20 @@ export function AudioProvider({ children }: AudioProviderProps) {
           state.manager.currentlyPlaying.currentTime = 0;
         }
 
-        // Get audio element from preloaded or create new one
+        // Get audio element from preloaded or load it if not available
         let audio = state.manager.preloadedAudio.get(audioId);
 
         if (!audio) {
-          // For demo purposes, we'll create a silent audio element
-          // In a real app, this would load the actual audio file
-          audio = new Audio();
-          audio.src =
-            `data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvGIcBDaH0fLUeSMFl4ja8sWJS` +
-            `QIhbsLt3Z5NEAxPqOPwtmMdBjiN1/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvGIcBDaH0fLUeSMFm4ja8sWJS`;
+          // Load audio file using AudioManifestManager if not preloaded
+          const loadResult = await audioManifestManager.loadAudioFile(audioId);
 
+          if (!loadResult.success || !loadResult.audioElement) {
+            throw new Error(
+              `Failed to load audio "${audioId}": ${loadResult.error}`
+            );
+          }
+
+          audio = loadResult.audioElement;
           dispatch({ type: 'ADD_PRELOADED_AUDIO', id: audioId, audio });
         }
 
