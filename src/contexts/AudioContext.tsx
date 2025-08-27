@@ -4,14 +4,19 @@ import React, {
   useCallback,
   useEffect,
   useReducer,
+  useState,
 } from 'react';
 
+import { AudioErrorToast } from '../components/AudioErrorToast';
 import type { AudioContextType, AudioManager, AudioLoadState } from '../types';
+import type { AudioError, AudioErrorState } from '../types/audio-errors';
+import { audioErrorHandler } from '../utils/AudioErrorHandler';
 import { audioManifestManager } from '../utils/AudioManifestManager';
 
 interface AudioState {
   manager: AudioManager;
   loadingStates: Map<string, AudioLoadState>;
+  errorState: AudioErrorState;
   isInitialized: boolean;
 }
 
@@ -21,7 +26,10 @@ type AudioAction =
   | { type: 'SET_CURRENT_AUDIO'; audio: HTMLAudioElement | undefined }
   | { type: 'SET_LOADING_STATE'; id: string; state: AudioLoadState }
   | { type: 'INITIALIZE' }
-  | { type: 'ADD_PRELOADED_AUDIO'; id: string; audio: HTMLAudioElement };
+  | { type: 'ADD_PRELOADED_AUDIO'; id: string; audio: HTMLAudioElement }
+  | { type: 'ADD_ERROR'; error: AudioError }
+  | { type: 'CLEAR_ERROR'; errorId?: string }
+  | { type: 'SET_RECOVERING'; isRecovering: boolean };
 
 const initialState: AudioState = {
   manager: {
@@ -31,6 +39,12 @@ const initialState: AudioState = {
     isMuted: false,
   },
   loadingStates: new Map(),
+  errorState: {
+    hasError: false,
+    errors: [],
+    retryCount: 0,
+    isRecovering: false,
+  },
   isInitialized: false,
 };
 
@@ -90,6 +104,50 @@ function audioReducer(state: AudioState, action: AudioAction): AudioState {
         isInitialized: true,
       };
 
+    case 'ADD_ERROR': {
+      const newErrors = [...state.errorState.errors, action.error];
+      // Keep only the last 10 errors
+      if (newErrors.length > 10) {
+        newErrors.shift();
+      }
+
+      return {
+        ...state,
+        errorState: {
+          ...state.errorState,
+          hasError: true,
+          errors: newErrors,
+          lastError: action.error,
+        },
+      };
+    }
+
+    case 'CLEAR_ERROR': {
+      if (action.errorId) {
+        // Clear specific error by ID (if we add IDs to errors in the future)
+        return state;
+      }
+      // Clear all errors
+      return {
+        ...state,
+        errorState: {
+          ...state.errorState,
+          hasError: false,
+          errors: [],
+          lastError: undefined,
+        },
+      };
+    }
+
+    case 'SET_RECOVERING':
+      return {
+        ...state,
+        errorState: {
+          ...state.errorState,
+          isRecovering: action.isRecovering,
+        },
+      };
+
     default:
       return state;
   }
@@ -103,6 +161,7 @@ interface AudioProviderProps {
 
 export function AudioProvider({ children }: AudioProviderProps) {
   const [state, dispatch] = useReducer(audioReducer, initialState);
+  const [toastErrors, setToastErrors] = useState<AudioError[]>([]);
 
   const playAudio = useCallback(
     async (audioId: string): Promise<void> => {
@@ -145,8 +204,23 @@ export function AudioProvider({ children }: AudioProviderProps) {
           dispatch({ type: 'SET_CURRENT_AUDIO', audio: undefined });
         };
       } catch (error) {
-        console.error(`Failed to play audio ${audioId}:`, error);
+        const audioError = audioErrorHandler.createError(
+          error instanceof Error ? error : new Error('Failed to play audio'),
+          {
+            audioId,
+            operation: 'playAudio',
+          }
+        );
+
+        dispatch({ type: 'ADD_ERROR', error: audioError });
         dispatch({ type: 'SET_CURRENT_AUDIO', audio: undefined });
+
+        // Show toast for non-critical errors
+        if (audioError.severity !== 'CRITICAL') {
+          setToastErrors(prev => [...prev, audioError]);
+        }
+
+        console.error(`Failed to play audio ${audioId}:`, error);
       }
     },
     [
@@ -208,7 +282,17 @@ export function AudioProvider({ children }: AudioProviderProps) {
             },
           });
         } catch (error) {
-          console.error(`Failed to preload audio ${id}:`, error);
+          const audioError = audioErrorHandler.createError(
+            error instanceof Error
+              ? error
+              : new Error('Failed to preload audio'),
+            {
+              audioId: id,
+              operation: 'preloadAudio',
+            }
+          );
+
+          dispatch({ type: 'ADD_ERROR', error: audioError });
 
           // Get file info for error state URL
           const fileInfo = audioManifestManager.getAudioFileById(id);
@@ -224,10 +308,19 @@ export function AudioProvider({ children }: AudioProviderProps) {
               url: fileUrl,
               isLoaded: false,
               isLoading: false,
-              error:
-                error instanceof Error ? error.message : 'Failed to load audio',
+              error: audioError.userMessage || audioError.message,
             },
           });
+
+          // Show toast for medium/high severity errors
+          if (
+            audioError.severity === 'MEDIUM' ||
+            audioError.severity === 'HIGH'
+          ) {
+            setToastErrors(prev => [...prev, audioError]);
+          }
+
+          console.error(`Failed to preload audio ${id}:`, error);
         }
       });
 
@@ -272,6 +365,37 @@ export function AudioProvider({ children }: AudioProviderProps) {
     state.manager.volume,
   ]);
 
+  const clearErrors = useCallback(() => {
+    dispatch({ type: 'CLEAR_ERROR' });
+  }, []);
+
+  const retryFailedAudio = useCallback(async (audioId: string) => {
+    dispatch({ type: 'SET_RECOVERING', isRecovering: true });
+
+    try {
+      await audioManifestManager.retryFailedFile(audioId);
+      // Remove this specific error from our state
+      dispatch({ type: 'CLEAR_ERROR' });
+      console.log(`✅ Successfully recovered audio: ${audioId}`);
+    } catch (error) {
+      const audioError = audioErrorHandler.createError(
+        error instanceof Error ? error : new Error('Retry failed'),
+        {
+          audioId,
+          operation: 'retryFailedAudio',
+        }
+      );
+      dispatch({ type: 'ADD_ERROR', error: audioError });
+      console.error(`❌ Failed to recover audio: ${audioId}`, error);
+    } finally {
+      dispatch({ type: 'SET_RECOVERING', isRecovering: false });
+    }
+  }, []);
+
+  const dismissToastError = useCallback((error: AudioError) => {
+    setToastErrors(prev => prev.filter(e => e !== error));
+  }, []);
+
   // Initialize audio context on first user interaction
   useEffect(() => {
     const initAudio = () => {
@@ -306,11 +430,23 @@ export function AudioProvider({ children }: AudioProviderProps) {
     setVolume,
     isMuted: state.manager.isMuted,
     toggleMute,
+    errorState: state.errorState,
+    clearErrors,
+    retryFailedAudio,
   };
 
   return (
     <AudioContext.Provider value={contextValue}>
       {children}
+      {/* Error Toast Notifications */}
+      {toastErrors.map((error, index) => (
+        <AudioErrorToast
+          key={`${error.type}-${error.context?.timestamp || index}`}
+          error={error}
+          duration={error.severity === 'CRITICAL' ? 0 : 5000} // Critical errors don't auto-dismiss
+          onClose={() => dismissToastError(error)}
+        />
+      ))}
     </AudioContext.Provider>
   );
 }
