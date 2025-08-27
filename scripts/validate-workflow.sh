@@ -38,7 +38,12 @@ log_info() {
 
 # Get current branch name
 get_current_branch() {
-    git rev-parse --abbrev-ref HEAD
+    # In GitHub Actions, prefer GITHUB_HEAD_REF for PR validations
+    if [[ -n "$GITHUB_HEAD_REF" ]]; then
+        echo "$GITHUB_HEAD_REF"
+    else
+        git rev-parse --abbrev-ref HEAD
+    fi
 }
 
 # Check if branch follows naming convention
@@ -275,7 +280,11 @@ case "${1:-validate}" in
         run_validation
         ;;
     "branch-name")
-        validate_branch_name "$(get_current_branch)"
+        if [[ -n "$2" ]]; then
+            validate_branch_name "$2"
+        else
+            validate_branch_name "$(get_current_branch)"
+        fi
         ;;
     "commit-msg")
         if [[ -n "$2" ]]; then
@@ -291,10 +300,10 @@ case "${1:-validate}" in
         echo "Usage: $0 [command]"
         echo ""
         echo "Commands:"
-        echo "  validate     - Run all validations (default)"
-        echo "  branch-name  - Validate current branch name only"
-        echo "  commit-msg   - Validate specific commit message"
-        echo "  help         - Show this help message"
+        echo "  validate                 - Run all validations (default)"
+        echo "  branch-name [branch]     - Validate branch name (current branch if not specified)"
+        echo "  commit-msg '<message>'   - Validate specific commit message"
+        echo "  help                     - Show this help message"
         echo ""
         echo "This script validates:"
         echo "  ✓ Branch naming conventions"

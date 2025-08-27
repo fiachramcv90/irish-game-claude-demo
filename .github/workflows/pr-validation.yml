@@ -39,7 +39,7 @@ jobs:
         id: branch_validation
         run: |
           echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_OUTPUT
-          ./scripts/validate-workflow.sh branch-name
+          ./scripts/validate-workflow.sh branch-name "${GITHUB_HEAD_REF}"
         env:
           GITHUB_HEAD_REF: ${{ github.head_ref }}
 
