@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 
 import type { AudioContextType, AudioManager, AudioLoadState } from '../types';
+import { audioManifestManager } from '../utils/AudioManifestManager';
 
 interface AudioState {
   manager: AudioManager;
@@ -112,17 +113,20 @@ export function AudioProvider({ children }: AudioProviderProps) {
           state.manager.currentlyPlaying.currentTime = 0;
         }
 
-        // Get audio element from preloaded or create new one
+        // Get audio element from preloaded or load it if not available
         let audio = state.manager.preloadedAudio.get(audioId);
 
         if (!audio) {
-          // For demo purposes, we'll create a silent audio element
-          // In a real app, this would load the actual audio file
-          audio = new Audio();
-          audio.src =
-            `data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvGIcBDaH0fLUeSMFl4ja8sWJS` +
-            `QIhbsLt3Z5NEAxPqOPwtmMdBjiN1/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvGIcBDaH0fLUeSMFm4ja8sWJS`;
+          // Load audio file using AudioManifestManager if not preloaded
+          const loadResult = await audioManifestManager.loadAudioFile(audioId);
 
+          if (!loadResult.success || !loadResult.audioElement) {
+            throw new Error(
+              `Failed to load audio "${audioId}": ${loadResult.error}`
+            );
+          }
+
+          audio = loadResult.audioElement;
           dispatch({ type: 'ADD_PRELOADED_AUDIO', id: audioId, audio });
         }
 
@@ -160,30 +164,37 @@ export function AudioProvider({ children }: AudioProviderProps) {
           return; // Already preloaded
         }
 
-        dispatch({
-          type: 'SET_LOADING_STATE',
-          id,
-          state: {
-            id,
-            url: `audio/${id}.mp3`,
-            isLoaded: false,
-            isLoading: true,
-          },
-        });
-
         try {
-          // For demo purposes, create a mock audio element
-          // In a real app, this would load the actual audio file
-          const audio = new Audio();
-          audio.preload = 'auto';
+          // Initialize AudioManifestManager if needed
+          if (!audioManifestManager.getManifest()) {
+            await audioManifestManager.loadManifest();
+          }
 
-          await new Promise((resolve, reject) => {
-            audio.oncanplaythrough = resolve;
-            audio.onerror = reject;
-            audio.src =
-              `data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvGIcBDaH0fLUeSMFl4ja8sWJS` +
-              `QIhbsLt3Z5NEAxPqOPwtmMdBjiN1/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvGIcBDaH0fLUeSMFm4ja8sWJS`;
+          // Get file info to determine the actual URL
+          const fileInfo = audioManifestManager.getAudioFileById(id);
+          const fileUrl = fileInfo
+            ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
+            : `audio/${id}.mp3`;
+
+          dispatch({
+            type: 'SET_LOADING_STATE',
+            id,
+            state: {
+              id,
+              url: fileUrl,
+              isLoaded: false,
+              isLoading: true,
+            },
           });
+
+          // Try to load audio using AudioManifestManager
+          const loadResult = await audioManifestManager.loadAudioFile(id);
+
+          if (!loadResult.success || !loadResult.audioElement) {
+            throw new Error(loadResult.error || 'Failed to load audio file');
+          }
+
+          const audio = loadResult.audioElement;
 
           dispatch({ type: 'ADD_PRELOADED_AUDIO', id, audio });
           dispatch({
@@ -191,19 +202,26 @@ export function AudioProvider({ children }: AudioProviderProps) {
             id,
             state: {
               id,
-              url: `audio/${id}.mp3`,
+              url: loadResult.fileUsed || fileUrl,
               isLoaded: true,
               isLoading: false,
             },
           });
         } catch (error) {
           console.error(`Failed to preload audio ${id}:`, error);
+
+          // Get file info for error state URL
+          const fileInfo = audioManifestManager.getAudioFileById(id);
+          const fileUrl = fileInfo
+            ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
+            : `audio/${id}.mp3`;
+
           dispatch({
             type: 'SET_LOADING_STATE',
             id,
             state: {
               id,
-              url: `audio/${id}.mp3`,
+              url: fileUrl,
               isLoaded: false,
               isLoading: false,
               error:

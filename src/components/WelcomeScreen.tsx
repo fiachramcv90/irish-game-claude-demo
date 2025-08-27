@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { AUDIO_CONFIG } from '../constants/audio';
 import { useAudio } from '../contexts/AudioContext';
 import { useProgress } from '../contexts/ProgressContext';
 
@@ -23,7 +24,10 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
       try {
         // Add a timeout to prevent infinite loading in tests
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Audio preload timeout')), 50);
+          setTimeout(
+            () => reject(new Error('Audio preload timeout')),
+            AUDIO_CONFIG.PRELOAD_TIMEOUT
+          );
         });
 
         await Promise.race([

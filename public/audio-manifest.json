@@ -1,0 +1,419 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01T00:00:00Z",
+  "description": "Audio file manifest for Irish language learning application",
+  "supportedFormats": ["wav", "mp3"],
+  "defaultFormat": "wav",
+  "fallbackFormat": "mp3",
+  "categories": {
+    "colors": {
+      "description": "Color vocabulary pronunciations",
+      "files": [
+        {
+          "id": "dearg",
+          "irish": "dearg",
+          "english": "red",
+          "phonetic": "JARR-ag",
+          "files": {
+            "wav": "audio/colors/dearg.wav",
+            "mp3": "audio/colors/dearg.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "gorm",
+          "irish": "gorm",
+          "english": "blue",
+          "phonetic": "GOR-um",
+          "files": {
+            "wav": "audio/colors/gorm.wav",
+            "mp3": "audio/colors/gorm.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "bui",
+          "irish": "buí",
+          "english": "yellow",
+          "phonetic": "BOO-ee",
+          "files": {
+            "wav": "audio/colors/bui.wav",
+            "mp3": "audio/colors/bui.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "glas",
+          "irish": "glas",
+          "english": "green",
+          "phonetic": "GLASS",
+          "files": {
+            "wav": "audio/colors/glas.wav",
+            "mp3": "audio/colors/glas.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "ban",
+          "irish": "bán",
+          "english": "white",
+          "phonetic": "BAWN",
+          "files": {
+            "wav": "audio/colors/ban.wav",
+            "mp3": "audio/colors/ban.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "dubh",
+          "irish": "dubh",
+          "english": "black",
+          "phonetic": "DOO",
+          "files": {
+            "wav": "audio/colors/dubh.wav",
+            "mp3": "audio/colors/dubh.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "oraiste",
+          "irish": "oráiste",
+          "english": "orange",
+          "phonetic": "or-AWSH-te",
+          "files": {
+            "wav": "audio/colors/oraiste.wav",
+            "mp3": "audio/colors/oraiste.mp3"
+          },
+          "duration": 0.6,
+          "dialect": "ulster"
+        },
+        {
+          "id": "corcra",
+          "irish": "corcra",
+          "english": "purple",
+          "phonetic": "KOR-kra",
+          "files": {
+            "wav": "audio/colors/corcra.wav",
+            "mp3": "audio/colors/corcra.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        }
+      ]
+    },
+    "animals": {
+      "description": "Animal vocabulary pronunciations",
+      "files": [
+        {
+          "id": "cat",
+          "irish": "cat",
+          "english": "cat",
+          "phonetic": "CAT",
+          "files": {
+            "wav": "audio/animals/cat.wav",
+            "mp3": "audio/animals/cat.mp3"
+          },
+          "duration": 0.4,
+          "dialect": "ulster"
+        },
+        {
+          "id": "madra",
+          "irish": "madra",
+          "english": "dog",
+          "phonetic": "MAD-ra",
+          "files": {
+            "wav": "audio/animals/madra.wav",
+            "mp3": "audio/animals/madra.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "bo",
+          "irish": "bó",
+          "english": "cow",
+          "phonetic": "BOH",
+          "files": {
+            "wav": "audio/animals/bo.wav",
+            "mp3": "audio/animals/bo.mp3"
+          },
+          "duration": 0.4,
+          "dialect": "ulster"
+        },
+        {
+          "id": "each",
+          "irish": "each",
+          "english": "horse",
+          "phonetic": "AKH",
+          "files": {
+            "wav": "audio/animals/each.wav",
+            "mp3": "audio/animals/each.mp3"
+          },
+          "duration": 0.4,
+          "dialect": "ulster"
+        },
+        {
+          "id": "caora",
+          "irish": "caora",
+          "english": "sheep",
+          "phonetic": "KEE-ra",
+          "files": {
+            "wav": "audio/animals/caora.wav",
+            "mp3": "audio/animals/caora.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "ean",
+          "irish": "éan",
+          "english": "bird",
+          "phonetic": "AY-an",
+          "files": {
+            "wav": "audio/animals/ean.wav",
+            "mp3": "audio/animals/ean.mp3"
+          },
+          "duration": 0.4,
+          "dialect": "ulster"
+        },
+        {
+          "id": "iasc",
+          "irish": "iasc",
+          "english": "fish",
+          "phonetic": "EE-ask",
+          "files": {
+            "wav": "audio/animals/iasc.wav",
+            "mp3": "audio/animals/iasc.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "coinin",
+          "irish": "coinín",
+          "english": "rabbit",
+          "phonetic": "kun-EEN",
+          "files": {
+            "wav": "audio/animals/coinin.wav",
+            "mp3": "audio/animals/coinin.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        }
+      ]
+    },
+    "numbers": {
+      "description": "Number vocabulary pronunciations",
+      "files": [
+        {
+          "id": "haon",
+          "irish": "a haon",
+          "english": "one",
+          "phonetic": "a-HAYN",
+          "files": {
+            "wav": "audio/numbers/haon.wav",
+            "mp3": "audio/numbers/haon.mp3"
+          },
+          "duration": 0.6,
+          "dialect": "ulster"
+        },
+        {
+          "id": "do",
+          "irish": "a dó",
+          "english": "two",
+          "phonetic": "a-DOH",
+          "files": {
+            "wav": "audio/numbers/do.wav",
+            "mp3": "audio/numbers/do.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "tri",
+          "irish": "a trí",
+          "english": "three",
+          "phonetic": "a-TREE",
+          "files": {
+            "wav": "audio/numbers/tri.wav",
+            "mp3": "audio/numbers/tri.mp3"
+          },
+          "duration": 0.5,
+          "dialect": "ulster"
+        },
+        {
+          "id": "ceathair",
+          "irish": "a ceathair",
+          "english": "four",
+          "phonetic": "a-KAH-her",
+          "files": {
+            "wav": "audio/numbers/ceathair.wav",
+            "mp3": "audio/numbers/ceathair.mp3"
+          },
+          "duration": 0.7,
+          "dialect": "ulster"
+        },
+        {
+          "id": "cuig",
+          "irish": "a cúig",
+          "english": "five",
+          "phonetic": "a-COO-ig",
+          "files": {
+            "wav": "audio/numbers/cuig.wav",
+            "mp3": "audio/numbers/cuig.mp3"
+          },
+          "duration": 0.6,
+          "dialect": "ulster"
+        }
+      ]
+    },
+    "letters": {
+      "description": "Letter pronunciation guide",
+      "files": [
+        {
+          "id": "letter_a",
+          "irish": "a",
+          "english": "a",
+          "phonetic": "AH",
+          "files": {
+            "wav": "audio/letters/letter_a.wav",
+            "mp3": "audio/letters/letter_a.mp3"
+          },
+          "duration": 0.3,
+          "dialect": "ulster"
+        },
+        {
+          "id": "letter_b",
+          "irish": "b",
+          "english": "b",
+          "phonetic": "BAY",
+          "files": {
+            "wav": "audio/letters/letter_b.wav",
+            "mp3": "audio/letters/letter_b.mp3"
+          },
+          "duration": 0.3,
+          "dialect": "ulster"
+        },
+        {
+          "id": "letter_c",
+          "irish": "c",
+          "english": "c",
+          "phonetic": "KAY",
+          "files": {
+            "wav": "audio/letters/letter_c.wav",
+            "mp3": "audio/letters/letter_c.mp3"
+          },
+          "duration": 0.3,
+          "dialect": "ulster"
+        }
+      ]
+    },
+    "ui": {
+      "description": "User interface sound effects",
+      "files": [
+        {
+          "id": "success",
+          "description": "Success/correct answer sound",
+          "files": {
+            "wav": "audio/ui/success.wav",
+            "mp3": "audio/ui/success.mp3"
+          },
+          "duration": 0.8,
+          "volume": 0.6
+        },
+        {
+          "id": "error",
+          "description": "Error/incorrect answer sound",
+          "files": {
+            "wav": "audio/ui/error.wav",
+            "mp3": "audio/ui/error.mp3"
+          },
+          "duration": 0.5,
+          "volume": 0.4
+        },
+        {
+          "id": "click",
+          "description": "Button click sound",
+          "files": {
+            "wav": "audio/ui/click.wav",
+            "mp3": "audio/ui/click.mp3"
+          },
+          "duration": 0.2,
+          "volume": 0.3
+        },
+        {
+          "id": "achievement",
+          "description": "Achievement unlock sound",
+          "files": {
+            "wav": "audio/ui/achievement.wav",
+            "mp3": "audio/ui/achievement.mp3"
+          },
+          "duration": 1.2,
+          "volume": 0.7
+        },
+        {
+          "id": "game_start",
+          "description": "Game start sound",
+          "files": {
+            "wav": "audio/ui/game_start.wav",
+            "mp3": "audio/ui/game_start.mp3"
+          },
+          "duration": 1.0,
+          "volume": 0.5
+        },
+        {
+          "id": "game_end",
+          "description": "Game completion sound",
+          "files": {
+            "wav": "audio/ui/game_end.wav",
+            "mp3": "audio/ui/game_end.mp3"
+          },
+          "duration": 1.5,
+          "volume": 0.6
+        },
+        {
+          "id": "correct_answer",
+          "description": "Correct answer feedback",
+          "files": {
+            "wav": "audio/ui/correct_answer.wav",
+            "mp3": "audio/ui/correct_answer.mp3"
+          },
+          "duration": 0.6,
+          "volume": 0.5
+        },
+        {
+          "id": "wrong_answer",
+          "description": "Wrong answer feedback",
+          "files": {
+            "wav": "audio/ui/wrong_answer.wav",
+            "mp3": "audio/ui/wrong_answer.mp3"
+          },
+          "duration": 0.4,
+          "volume": 0.4
+        },
+        {
+          "id": "welcome",
+          "description": "Welcome screen greeting sound",
+          "files": {
+            "wav": "audio/ui/welcome.wav",
+            "mp3": "audio/ui/welcome.mp3"
+          },
+          "duration": 1.0,
+          "volume": 0.6
+        }
+      ]
+    }
+  },
+  "validation": {
+    "totalFiles": 48,
+    "categories": 5,
+    "checksum": "placeholder-dev-checksum",
+    "integrityCheck": true
+  }
+}
