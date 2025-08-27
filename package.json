@@ -19,7 +19,12 @@
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
     "prepare": "husky",
-    "agent-matrix": "tsx .claude/commands/coordination-matrix.ts"
+    "agent-matrix": "tsx .claude/commands/coordination-matrix.ts",
+    "validate-workflow": "./scripts/validate-workflow.sh validate",
+    "create-branch": "./scripts/create-feature-branch.sh",
+    "dev-setup": "./scripts/dev-setup.sh",
+    "test-guardrails": "./scripts/test-guardrails.sh",
+    "workflow:help": "echo 'Workflow commands:' && echo '  npm run validate-workflow  - Check workflow compliance' && echo '  npm run create-branch       - Create feature branch (use -- --help for options)' && echo '  npm run dev-setup          - Set up development environment' && echo '  npm run test-guardrails    - Test all guardrails' && echo 'Examples:' && echo '  npm run create-branch -- -i 123 -t feature -d \"add-audio-controls\"' && echo '  npm run validate-workflow' && echo '  npm run test-guardrails --quick'"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

@@ -1,1 +1,7 @@
+#!/bin/bash
+
+# Run workflow validation first
+./scripts/validate-workflow.sh validate
+
+# If validation passes, run lint-staged
 npx lint-staged
