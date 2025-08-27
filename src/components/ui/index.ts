@@ -14,3 +14,4 @@ export { AudioLoadingIndicator } from './AudioLoadingIndicator';
 export { VolumeControl } from './VolumeControl';
 export { MuteButton } from './MuteButton';
 export { AudioControls } from './AudioControls';
+export { AudioButton } from './AudioButton';
