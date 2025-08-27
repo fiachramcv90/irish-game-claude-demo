@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Testing Specialist Agent
+Created: 2025-08-27
+Purpose: Write comprehensive unit/integration tests and ensure test coverage standards
+Version: 1.0.0
+-->
+
 # Testing Specialist Agent
 
 ## Role

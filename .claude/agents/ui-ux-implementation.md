@@ -1,3 +1,10 @@
+<!--
+Agent Definition: UI/UX Implementation Agent
+Created: 2025-08-27
+Purpose: Design React components, handle Tailwind styling, and ensure accessibility
+Version: 1.0.0
+-->
+
 # UI/UX Implementation Agent
 
 ## Role

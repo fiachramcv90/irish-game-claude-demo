@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Documentation Agent
+Created: 2025-08-27
+Purpose: Create and maintain technical documentation, API docs, and user guides
+Version: 1.0.0
+-->
+
 # Documentation Agent
 
 ## Role

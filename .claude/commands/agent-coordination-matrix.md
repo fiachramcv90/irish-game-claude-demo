@@ -1,3 +1,10 @@
+<!--
+Command Definition: Agent Coordination Matrix
+Created: 2025-08-27
+Purpose: Interactive command for multi-agent workflow orchestration and monitoring
+Version: 1.0.0
+-->
+
 # Agent Coordination Matrix Command
 
 This command displays the multi-agent workflow orchestration system for the Irish Language Learning Game project.
@@ -282,11 +289,110 @@ Continue simulation? [y/n]:
 - Best practice recommendations
 - Common pitfall warnings
 
+### Error Handling & Recovery
+
+```bash
+agent-coordination-matrix --errors
+```
+
+```
+🚨 ERROR HANDLING & RECOVERY MECHANISMS
+======================================
+
+⚠️  TIMEOUT CONFIGURATION:
+├── Planning Agent: 60 minutes (requirements analysis timeout)
+├── Code Implementation: 120 minutes (complex feature implementation)
+├── Testing Specialist: 90 minutes (comprehensive test suite)
+├── Quality Assurance: 30 minutes (quality checks timeout)
+├── UI/UX Implementation: 90 minutes (component development)
+├── Audio & Game Logic: 75 minutes (audio processing timeout)
+├── Git & PR Management: 15 minutes (git operations timeout)
+└── Documentation: 45 minutes (documentation generation)
+
+🔄 RETRY POLICIES:
+├── Exponential Backoff: 1s → 2s → 4s → 8s → 16s (max 5 retries)
+├── Agent Failure Recovery: Auto-retry with fallback agent
+├── Quality Gate Failures: 3 retry attempts with incremental fixes
+└── Integration Conflicts: Automated conflict resolution (2 attempts)
+
+🛡️ FAILURE SCENARIOS & RESPONSES:
+
+1️⃣ AGENT TIMEOUT FAILURE
+   ├── Detection: No response within configured timeout
+   ├── Response: Escalate to backup agent + notify stakeholders
+   └── Recovery: Checkpoint restoration + workflow continuation
+
+2️⃣ QUALITY GATE FAILURE
+   ├── Detection: Quality threshold not met
+   ├── Response: Rollback + targeted fixes + re-validation
+   └── Recovery: Iterative improvement loop (max 3 cycles)
+
+3️⃣ CIRCULAR DEPENDENCY DEADLOCK
+   ├── Detection: Agent handoff loop detected
+   ├── Response: Break dependency chain + manual intervention
+   └── Recovery: Workflow pattern adjustment + restart
+
+4️⃣ RESOURCE EXHAUSTION
+   ├── Detection: System resource limits exceeded
+   ├── Response: Pause non-critical agents + resource cleanup
+   └── Recovery: Queue management + staged execution
+
+5️⃣ EXTERNAL SERVICE FAILURE
+   ├── Detection: API/service unavailable
+   ├── Response: Fallback to mock/cached data
+   └── Recovery: Monitor service + resume on availability
+
+🔧 RECOVERY STRATEGIES:
+├── Checkpoint & Restore: Save workflow state every 15 minutes
+├── Graceful Degradation: Continue with reduced functionality
+├── Circuit Breaker: Prevent cascade failures
+└── Manual Override: Human intervention when automated recovery fails
+
+📊 ERROR METRICS:
+├── Mean Time to Recovery (MTTR): 12 minutes (target: <15 min)
+├── Success Rate: 94.2% (target: >90%)
+├── Escalation Rate: 3.1% (target: <5%)
+└── Manual Intervention Rate: 1.8% (target: <3%)
+```
+
+### Performance Monitoring
+
+```bash
+agent-coordination-matrix --performance
+```
+
+```
+📈 WORKFLOW PERFORMANCE ANALYTICS
+=================================
+
+⏱️  EXECUTION TIMES (7-day average):
+├── Linear Workflow: 4.2 hours (±0.8h)
+├── Parallel Workflow: 6.8 hours (±1.2h)
+└── Iterative Workflow: 9.1 hours (±1.8h)
+
+🎯 AGENT UTILIZATION:
+├── Planning: 78% (optimal: 70-80%)
+├── Code Implementation: 85% (optimal: 75-85%)
+├── Testing: 72% (optimal: 65-75%)
+├── QA: 45% (optimal: 40-60%)
+├── UI/UX: 68% (optimal: 60-70%)
+├── Audio/Game: 52% (optimal: 45-65%)
+├── Git/PR: 35% (optimal: 30-50%)
+└── Documentation: 38% (optimal: 35-50%)
+
+⚡ BOTTLENECK ANALYSIS:
+├── Most Common: Code Implementation (38% of delays)
+├── Average Delay: 1.4 hours
+└── Recommended Action: Scale parallel execution
+```
+
 ### Integration Points
 
 - GitHub issue integration for automatic workflow selection
 - CI/CD pipeline integration for quality gate monitoring
 - Project management tool synchronization
 - Performance analytics and reporting
+- Error tracking and alerting systems
+- Resource monitoring and optimization
 
-This command serves as the central hub for understanding and managing the multi-agent development workflow, ensuring efficient coordination and successful project delivery.
+This command serves as the central hub for understanding and managing the multi-agent development workflow, ensuring efficient coordination, robust error handling, and successful project delivery.

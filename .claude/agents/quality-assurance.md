@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Quality Assurance Agent
+Created: 2025-08-27
+Purpose: Run quality checks, linting, formatting, and ensure all QA gates pass
+Version: 1.0.0
+-->
+
 # Quality Assurance Agent
 
 ## Role

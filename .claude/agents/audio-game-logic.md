@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Audio & Game Logic Agent
+Created: 2025-08-27
+Purpose: Handle audio systems, game mechanics, and Irish language processing
+Version: 1.0.0
+-->
+
 # Audio & Game Logic Agent
 
 ## Role

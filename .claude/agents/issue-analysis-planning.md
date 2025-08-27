@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Issue Analysis & Planning Agent
+Created: 2025-08-27
+Purpose: Parse GitHub issues, create implementation roadmaps, and manage project planning
+Version: 1.0.0
+-->
+
 # Issue Analysis & Planning Agent
 
 ## Role

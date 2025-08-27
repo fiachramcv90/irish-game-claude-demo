@@ -15,7 +15,7 @@
 📱 App Discovery → 🎮 First Play → 📈 Early Progress → 🔄 Return Visit
 ```
 
-#### Detailed Flow:
+#### Detailed Flow
 
 ```
 1. App Launch
@@ -64,7 +64,7 @@
 🏠 Routine Time → 🎮 Game Choice → 🧠 Learning → 📊 Progress
 ```
 
-#### Detailed Flow:
+#### Detailed Flow
 
 ```
 1. Regular Learning Time
@@ -112,7 +112,7 @@
 🎯 Skill Building → 🌟 Mastery → 🎪 Advanced Games → 🏆 Achievement
 ```
 
-#### Detailed Flow:
+#### Detailed Flow
 
 ```
 1. Skill Development Phase

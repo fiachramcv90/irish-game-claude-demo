@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Code Implementation Agent
+Created: 2025-08-27
+Purpose: Write production-ready TypeScript/React code following project conventions
+Version: 1.0.0
+-->
+
 # Code Implementation Agent
 
 ## Role

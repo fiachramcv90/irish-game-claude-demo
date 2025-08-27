@@ -11,12 +11,15 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"!node_modules\"",
+    "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"!node_modules\"",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
-    "prepare": "husky"
+    "prepare": "husky",
+    "agent-matrix": "tsx .claude/commands/coordination-matrix.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -51,9 +54,11 @@
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.1.5",
+    "markdownlint-cli2": "^0.18.1",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.20.5",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
@@ -64,7 +69,11 @@
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{js,jsx,json,css,md}": [
+    "*.{js,jsx,json,css}": [
+      "prettier --write"
+    ],
+    "*.md": [
+      "markdownlint-cli2 --fix",
       "prettier --write"
     ]
   }

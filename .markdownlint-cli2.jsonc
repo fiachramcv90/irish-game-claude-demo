@@ -1,0 +1,54 @@
+{
+  // Markdownlint configuration for agent system documentation
+  "config": {
+    // Line length - allow longer lines for technical documentation
+    "MD013": {
+      "line_length": 250,
+      "code_blocks": false,
+      "tables": false,
+      "headings": false
+    },
+    
+    // Allow multiple consecutive blank lines in documentation sections
+    "MD012": false,
+    
+    // Allow inline HTML for comment headers and special formatting
+    "MD033": {
+      "allowed_elements": ["br", "kbd", "sub", "sup", "span", "details", "summary"]
+    },
+    
+    // Allow code blocks without language specification (common for output examples)
+    "MD040": false,
+    
+    // Allow trailing punctuation in headers (for agent names with colons)
+    "MD026": {
+      "punctuation": ".,;:!?"
+    },
+    
+    // Allow multiple headers with same content (common in agent docs)
+    "MD024": {
+      "siblings_only": true
+    },
+    
+    // Disable dollar signs in math expressions rule (conflicts with bash examples)
+    "MD014": false,
+    
+    // Allow bare URLs in angle brackets (for GitHub links)
+    "MD034": false,
+    
+    // Allow emphasis markers for UI elements
+    "MD036": false
+  },
+  
+  // Ignore patterns
+  "ignores": [
+    "node_modules/**",
+    ".git/**",
+    "dist/**",
+    "build/**",
+    "coverage/**"
+  ],
+  
+  // Fix mode settings
+  "fix": true
+}

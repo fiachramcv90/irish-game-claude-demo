@@ -1,3 +1,10 @@
+<!--
+Agent Definition: Git & PR Management Agent
+Created: 2025-08-27
+Purpose: Handle git operations, branch management, and pull request workflows
+Version: 1.0.0
+-->
+
 # Git & PR Management Agent
 
 ## Role

@@ -2,7 +2,9 @@
 
 ## Purpose
 
-A collection of interactive mini-games to help teach Irish (Gaeilge) to young learners, focusing on Ulster Irish pronunciation and vocabulary. The app includes card matching games, letter recognition, and sound games with progressive difficulty and mobile/desktop responsive design.
+A collection of interactive mini-games to help teach Irish (Gaeilge) to young learners, focusing on Ulster Irish
+pronunciation and vocabulary. The app includes card matching games, letter recognition, and sound games with
+progressive difficulty and mobile/desktop responsive design.
 
 ## Tech Stack
 
