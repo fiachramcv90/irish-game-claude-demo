@@ -10,3 +10,4 @@ export {
 export { ProgressBar } from './ProgressBar';
 export { Modal } from './Modal';
 export { LoadingSpinner } from './LoadingSpinner';
+export { AudioLoadingIndicator } from './AudioLoadingIndicator';

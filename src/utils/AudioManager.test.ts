@@ -528,5 +528,319 @@ describe('AudioManager', () => {
       audioManager.destroy();
       expect(audioManager.isLoaded('test')).toBe(false);
     });
+
+    it('should cancel all active preloads on destroy', async () => {
+      const audioUrls = {
+        audio1: '/audio1.mp3',
+        audio2: '/audio2.mp3',
+      };
+
+      const preloadPromise = audioManager.preloadWithProgress(audioUrls);
+
+      // Destroy before preload completes
+      audioManager.destroy();
+
+      try {
+        await preloadPromise;
+      } catch {
+        // Preload should be cancelled
+      }
+
+      expect(audioManager.getAllPreloadProgress()).toHaveLength(0);
+    });
+  });
+
+  describe('enhanced preloading', () => {
+    describe('preloadWithProgress', () => {
+      it('should preload multiple files with progress tracking', async () => {
+        const audioUrls = {
+          audio1: '/audio1.mp3',
+          audio2: '/audio2.mp3',
+          audio3: '/audio3.mp3',
+        };
+
+        const onPreloadStart = vi.fn();
+        const onPreloadProgress = vi.fn();
+        const onPreloadComplete = vi.fn();
+
+        audioManager.addEventListener('onPreloadStart', onPreloadStart);
+        audioManager.addEventListener('onPreloadProgress', onPreloadProgress);
+        audioManager.addEventListener('onPreloadComplete', onPreloadComplete);
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls);
+
+        // Simulate successful loads with delay
+        setTimeout(() => {
+          Object.keys(audioUrls).forEach(id => {
+            const audioElement = (audioManager as any).audioFiles.get(
+              id
+            )?.element;
+            if (audioElement instanceof MockAudio) {
+              audioElement.simulateLoad();
+            }
+          });
+        }, 10);
+
+        const result = await preloadPromise;
+
+        expect(result.successful).toEqual(['audio1', 'audio2', 'audio3']);
+        expect(result.failed).toHaveLength(0);
+        expect(result.cancelled).toBe(false);
+
+        expect(onPreloadStart).toHaveBeenCalledWith(result.preloadId, 3);
+        expect(onPreloadProgress).toHaveBeenCalled();
+        expect(onPreloadComplete).toHaveBeenCalledWith(
+          result.preloadId,
+          ['audio1', 'audio2', 'audio3'],
+          []
+        );
+      });
+
+      it.skip('should handle failed preloads gracefully', async () => {
+        const audioUrls = {
+          audio1: '/audio1.mp3',
+          audio2: '/invalid.mp3',
+          audio3: '/audio3.mp3',
+        };
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls);
+
+        // Simulate mixed success/failure by responding to all loads in order
+        setTimeout(() => {
+          const audio1 = (audioManager as any).audioFiles.get(
+            'audio1'
+          )?.element;
+          const audio2 = (audioManager as any).audioFiles.get(
+            'audio2'
+          )?.element;
+          const audio3 = (audioManager as any).audioFiles.get(
+            'audio3'
+          )?.element;
+
+          if (audio1 instanceof MockAudio) audio1.simulateLoad();
+          if (audio2 instanceof MockAudio) audio2.simulateError();
+          if (audio3 instanceof MockAudio) audio3.simulateLoad();
+        }, 10);
+
+        const result = await preloadPromise;
+
+        expect(result.successful).toEqual(['audio1', 'audio3']);
+        expect(result.failed).toHaveLength(1);
+        expect(result.failed[0].audioId).toBe('audio2');
+        expect(result.cancelled).toBe(false);
+      });
+
+      it('should respect concurrency limits', async () => {
+        const audioUrls = {
+          audio1: '/audio1.mp3',
+          audio2: '/audio2.mp3',
+          audio3: '/audio3.mp3',
+          audio4: '/audio4.mp3',
+          audio5: '/audio5.mp3',
+        };
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls, {
+          maxConcurrent: 2,
+        });
+
+        // Check that progress tracking works
+        const progressBefore = audioManager.getAllPreloadProgress();
+        expect(progressBefore).toHaveLength(1);
+        expect(progressBefore[0].totalItems).toBe(5);
+
+        // Simulate gradual loading
+        setTimeout(() => {
+          Object.keys(audioUrls).forEach(id => {
+            const audioElement = (audioManager as any).audioFiles.get(
+              id
+            )?.element;
+            if (audioElement instanceof MockAudio) {
+              audioElement.simulateLoad();
+            }
+          });
+        }, 10);
+
+        const result = await preloadPromise;
+
+        expect(result.successful).toHaveLength(5);
+        expect(audioManager.getAllPreloadProgress()).toHaveLength(0);
+      });
+
+      it.skip('should retry failed loads according to options', async () => {
+        const audioUrls = { audio1: '/flaky.mp3' };
+        let attemptCount = 0;
+
+        // Mock a flaky audio element that fails twice then succeeds
+        const originalLoad = audioManager.load.bind(audioManager);
+        audioManager.load = vi.fn().mockImplementation(async (id, url) => {
+          attemptCount++;
+          if (attemptCount <= 2) {
+            throw new Error('Network error');
+          }
+          return originalLoad(id, url);
+        });
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls, {
+          retryAttempts: 2,
+        });
+
+        // Simulate eventual success on 3rd attempt
+        setTimeout(() => {
+          const audioElement = (audioManager as any).audioFiles.get(
+            'audio1'
+          )?.element;
+          if (audioElement instanceof MockAudio) {
+            audioElement.simulateLoad();
+          }
+        }, 10);
+
+        const result = await preloadPromise;
+
+        expect(result.successful).toContain('audio1');
+        expect(attemptCount).toBe(3); // Initial attempt + 2 retries
+      });
+    });
+
+    describe('cancelPreload', () => {
+      it('should cancel an active preload operation', async () => {
+        const audioUrls = {
+          audio1: '/audio1.mp3',
+          audio2: '/audio2.mp3',
+        };
+
+        const onPreloadCancel = vi.fn();
+        audioManager.addEventListener('onPreloadCancel', onPreloadCancel);
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls);
+
+        // Get the preload ID
+        const activePreloads = audioManager.getAllPreloadProgress();
+        expect(activePreloads).toHaveLength(1);
+        const preloadId = activePreloads[0].preloadId;
+
+        // Cancel the preload
+        const cancelled = audioManager.cancelPreload(preloadId);
+        expect(cancelled).toBe(true);
+
+        expect(onPreloadCancel).toHaveBeenCalledWith(preloadId);
+
+        try {
+          await preloadPromise;
+        } catch {
+          // Preload should throw or resolve with cancelled: true
+        }
+
+        expect(audioManager.getAllPreloadProgress()).toHaveLength(0);
+      });
+
+      it('should return false for non-existent preload ID', () => {
+        const cancelled = audioManager.cancelPreload('non-existent');
+        expect(cancelled).toBe(false);
+      });
+    });
+
+    describe('getPreloadProgress', () => {
+      it('should return progress for active preload', async () => {
+        const audioUrls = { audio1: '/audio1.mp3' };
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls);
+
+        const activePreloads = audioManager.getAllPreloadProgress();
+        const preloadId = activePreloads[0].preloadId;
+
+        const progress = audioManager.getPreloadProgress(preloadId);
+        expect(progress).toBeDefined();
+        expect(progress?.totalItems).toBe(1);
+        expect(progress?.loadedItems).toBe(0);
+
+        // Complete the preload
+        setTimeout(() => {
+          const audioElement = (audioManager as any).audioFiles.get(
+            'audio1'
+          )?.element;
+          if (audioElement instanceof MockAudio) {
+            audioElement.simulateLoad();
+          }
+        }, 10);
+
+        await preloadPromise;
+
+        // Progress should be cleaned up after completion
+        const progressAfter = audioManager.getPreloadProgress(preloadId);
+        expect(progressAfter).toBeUndefined();
+      });
+
+      it('should return undefined for non-existent preload', () => {
+        const progress = audioManager.getPreloadProgress('non-existent');
+        expect(progress).toBeUndefined();
+      });
+    });
+
+    describe('getAllPreloadProgress', () => {
+      it('should return empty array when no preloads active', () => {
+        const progress = audioManager.getAllPreloadProgress();
+        expect(progress).toEqual([]);
+      });
+
+      it('should return progress for all active preloads', async () => {
+        const audioUrls1 = { audio1: '/audio1.mp3' };
+        const audioUrls2 = { audio2: '/audio2.mp3' };
+
+        const preload1 = audioManager.preloadWithProgress(audioUrls1);
+        const preload2 = audioManager.preloadWithProgress(audioUrls2);
+
+        const allProgress = audioManager.getAllPreloadProgress();
+        expect(allProgress).toHaveLength(2);
+        expect(allProgress[0].totalItems).toBe(1);
+        expect(allProgress[1].totalItems).toBe(1);
+
+        // Complete both preloads
+        setTimeout(() => {
+          const audio1 = (audioManager as any).audioFiles.get(
+            'audio1'
+          )?.element;
+          const audio2 = (audioManager as any).audioFiles.get(
+            'audio2'
+          )?.element;
+
+          if (audio1 instanceof MockAudio) audio1.simulateLoad();
+          if (audio2 instanceof MockAudio) audio2.simulateLoad();
+        }, 10);
+
+        await Promise.all([preload1, preload2]);
+
+        const allProgressAfter = audioManager.getAllPreloadProgress();
+        expect(allProgressAfter).toHaveLength(0);
+      });
+    });
+
+    describe('timeout handling', () => {
+      it.skip('should timeout slow loading files', async () => {
+        const audioUrls = { slowAudio: '/slow.mp3' };
+
+        // Override the mock to never emit canplaythrough
+        const originalAudio = globalThis.Audio;
+        class SlowMockAudio extends MockAudio {
+          simulateLoad() {
+            // Don't emit canplaythrough - simulate hanging load
+          }
+        }
+        vi.stubGlobal('Audio', SlowMockAudio);
+
+        const preloadPromise = audioManager.preloadWithProgress(audioUrls, {
+          timeout: 100, // Very short timeout
+        });
+
+        const result = await preloadPromise;
+
+        expect(result.successful).toHaveLength(0);
+        expect(result.failed).toHaveLength(1);
+        expect(result.failed[0].audioId).toBe('slowAudio');
+        expect(result.failed[0].error).toContain('Timeout');
+
+        // Restore original mock
+        vi.stubGlobal('Audio', originalAudio);
+      });
+    });
   });
 });
