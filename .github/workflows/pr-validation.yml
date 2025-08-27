@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for branch analysis
+          fetch-depth: 0 # Full history for branch analysis
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -48,7 +48,7 @@ jobs:
         run: |
           # Get all commits in this PR
           COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.sha }})
-          
+
           # Extract issue numbers from commits
           ISSUE_NUMBERS=()
           for commit in $COMMITS; do
@@ -58,14 +58,14 @@ jobs:
               ISSUE_NUMBERS+=("$ISSUE_NUM")
             fi
           done
-          
+
           # Remove duplicates and count unique issues
           UNIQUE_ISSUES=($(printf "%s\n" "${ISSUE_NUMBERS[@]}" | sort -u))
           ISSUE_COUNT=${#UNIQUE_ISSUES[@]}
-          
+
           echo "issue_count=$ISSUE_COUNT" >> $GITHUB_OUTPUT
           echo "issues=${UNIQUE_ISSUES[*]}" >> $GITHUB_OUTPUT
-          
+
           if [[ $ISSUE_COUNT -gt 1 ]]; then
             echo "❌ PR addresses multiple issues: ${UNIQUE_ISSUES[*]}"
             echo "Consider splitting this PR into separate branches for each issue"
@@ -81,31 +81,31 @@ jobs:
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_BODY="${{ github.event.pull_request.body }}"
-          
+
           # Check PR title format
           if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
             echo "❌ PR title doesn't follow conventional format"
             echo "Expected: <type>[optional scope]: <description>"
             exit 1
           fi
-          
+
           # Check for required PR sections
           REQUIRED_SECTIONS=("## Overview" "## Implementation Details" "## Testing" "## Checklist")
           MISSING_SECTIONS=()
-          
+
           for section in "${REQUIRED_SECTIONS[@]}"; do
             if [[ ! "$PR_BODY" =~ $section ]]; then
               MISSING_SECTIONS+=("$section")
             fi
           done
-          
+
           if [[ ${#MISSING_SECTIONS[@]} -gt 0 ]]; then
             echo "❌ PR description missing required sections:"
             printf '%s\n' "${MISSING_SECTIONS[@]}"
             echo "Use the PR template or run: gh pr create --template"
             exit 1
           fi
-          
+
           echo "✅ PR title and description are properly formatted"
 
       - name: Check Commit Message Compliance
@@ -114,7 +114,7 @@ jobs:
           # Get all commits in this PR
           COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.sha }})
           INVALID_COMMITS=()
-          
+
           for commit in $COMMITS; do
             COMMIT_MSG=$(git log --format=%B -n 1 $commit)
             COMMIT_SUBJECT=$(git log --format=%s -n 1 $commit)
@@ -129,33 +129,33 @@ jobs:
               INVALID_COMMITS+=("$commit: $COMMIT_SUBJECT")
             fi
           done
-          
+
           if [[ ${#INVALID_COMMITS[@]} -gt 0 ]]; then
             echo "❌ Found commits with invalid message format:"
             printf '%s\n' "${INVALID_COMMITS[@]}"
             echo "Fix with: git rebase -i origin/${{ github.base_ref }} and amend commit messages"
             exit 1
           fi
-          
+
           echo "✅ All commit messages follow conventional format"
 
       - name: Run Code Quality Checks
         id: quality_checks
         run: |
           echo "🔍 Running code quality checks..."
-          
+
           # TypeScript compilation
           npm run type-check
-          
+
           # Linting (fail on errors, allow warnings)
           npm run lint
-          
+
           # Code formatting check
           npm run format:check
-          
+
           # Build verification
           npm run build
-          
+
           echo "✅ All code quality checks passed"
 
       - name: Run Tests with Coverage
@@ -163,7 +163,7 @@ jobs:
         run: |
           echo "🧪 Running test suite with coverage..."
           npm run test:coverage
-          
+
           # Extract coverage percentage (adjust path as needed)
           if [[ -f coverage/coverage-summary.json ]]; then
             COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
@@ -186,7 +186,7 @@ jobs:
           PR_BODY="${{ github.event.pull_request.body }}"
           COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.sha }})
           HAS_BREAKING=false
-          
+
           # Check for breaking change indicators
           for commit in $COMMITS; do
             COMMIT_MSG=$(git log --format=%B -n 1 $commit)
@@ -195,7 +195,7 @@ jobs:
               break
             fi
           done
-          
+
           if [[ "$HAS_BREAKING" == true ]]; then
             if [[ ! "$PR_BODY" =~ "## Breaking Changes" ]]; then
               echo "❌ Breaking changes detected but not documented in PR"
@@ -204,7 +204,7 @@ jobs:
             fi
             echo "⚠️ Breaking changes detected and documented"
           fi
-          
+
           echo "has_breaking=$HAS_BREAKING" >> $GITHUB_OUTPUT
 
       - name: Validate Issue Link
@@ -215,12 +215,12 @@ jobs:
           # Extract issue numbers from PR body and commits
           PR_BODY="${{ github.event.pull_request.body }}"
           ISSUE_NUM=""
-          
+
           # Look for "Closes #123" or "Fixes #123" in PR body
           if [[ "$PR_BODY" =~ (Closes|Fixes|Resolves)\ #([0-9]+) ]]; then
             ISSUE_NUM="${BASH_REMATCH[2]}"
           fi
-          
+
           if [[ -n "$ISSUE_NUM" ]]; then
             echo "📋 Validating linked issue #$ISSUE_NUM..."
             
@@ -246,10 +246,10 @@ jobs:
         run: |
           REQUIRED_FILES=()
           MISSING_FILES=()
-          
+
           # Check if new components have corresponding tests
           NEW_COMPONENTS=$(git diff --name-only origin/${{ github.base_ref }}..HEAD | grep -E "src/components/.*\.(tsx?|jsx?)$" | head -10)
-          
+
           for component in $NEW_COMPONENTS; do
             # Convert component path to test path
             TEST_FILE=$(echo "$component" | sed 's/src\///' | sed 's/\.(tsx\?|jsx\?)$/.test.ts/')
@@ -259,14 +259,14 @@ jobs:
               MISSING_FILES+=("Test file for $component (expected: src/$TEST_FILE or $SPEC_FILE)")
             fi
           done
-          
+
           if [[ ${#MISSING_FILES[@]} -gt 0 ]]; then
             echo "❌ Missing required test files:"
             printf '%s\n' "${MISSING_FILES[@]}"
             echo "Add tests for new components before merging"
             exit 1
           fi
-          
+
           echo "✅ All required files are present"
 
       - name: Create PR Validation Summary
@@ -275,7 +275,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             // Get step results
             const steps = {
               branch_validation: '${{ steps.branch_validation.outcome }}',
@@ -288,24 +288,24 @@ jobs:
               issue_link_validation: '${{ steps.issue_link_validation.outcome }}',
               required_files_check: '${{ steps.required_files_check.outcome }}'
             };
-            
+
             const coverage = '${{ steps.test_coverage.outputs.coverage_pct }}' || 'N/A';
             const issueCount = '${{ steps.issue_scope_validation.outputs.issue_count }}' || '0';
             const issues = '${{ steps.issue_scope_validation.outputs.issues }}' || '';
             const hasBreaking = '${{ steps.breaking_changes.outputs.has_breaking }}' === 'true';
-            
+
             let summary = '## 🔍 PR Validation Summary\n\n';
-            
+
             // Overall status
             const failedSteps = Object.entries(steps).filter(([_, outcome]) => outcome === 'failure');
             const allPassed = failedSteps.length === 0;
-            
+
             if (allPassed) {
               summary += '✅ **All validation checks passed!** This PR is ready for review.\n\n';
             } else {
               summary += `❌ **${failedSteps.length} validation check(s) failed.** Please address the issues below.\n\n`;
             }
-            
+
             // Detailed results
             summary += '### Validation Results\n\n';
             summary += `| Check | Status | Details |\n`;
@@ -319,7 +319,7 @@ jobs:
             summary += `| Breaking Changes | ${steps.breaking_changes === 'success' ? '✅' : '❌'} | ${hasBreaking ? 'Breaking changes documented' : 'No breaking changes'} |\n`;
             summary += `| Issue Linking | ${steps.issue_link_validation === 'success' ? '✅' : '❌'} | GitHub issue properly linked |\n`;
             summary += `| Required Files | ${steps.required_files_check === 'success' ? '✅' : '❌'} | All required files present |\n`;
-            
+
             if (!allPassed) {
               summary += '\n### 🛠️ How to Fix Issues\n\n';
               summary += '1. **Branch naming**: Use format `type/description-issue-123`\n';
@@ -331,14 +331,14 @@ jobs:
               summary += '7. **Issue linking**: Add `Closes #123` to PR description\n\n';
               summary += '**Need help?** Check [DEVELOPMENT_WORKFLOW.md](./docs/DEVELOPMENT_WORKFLOW.md) for detailed guidance.\n';
             }
-            
+
             // Add workflow tips
             summary += '\n### 💡 Workflow Tips\n\n';
             summary += '- Use `./scripts/create-feature-branch.sh` for automatic branch creation\n';
             summary += '- Run `./scripts/validate-workflow.sh` locally before pushing\n';
             summary += '- Pre-commit hooks will catch most issues automatically\n';
             summary += '- Follow the [development workflow](./docs/DEVELOPMENT_WORKFLOW.md) for best practices\n';
-            
+
             // Post comment
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
