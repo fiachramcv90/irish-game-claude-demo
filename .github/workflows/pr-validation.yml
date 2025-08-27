@@ -1,0 +1,374 @@
+name: PR Validation & Quality Gates
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited, reopened]
+    branches: [main, develop]
+
+jobs:
+  pr-validation:
+    name: PR Validation & Workflow Compliance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      checks: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for branch analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Make scripts executable
+        run: |
+          chmod +x ./scripts/validate-workflow.sh
+          chmod +x ./scripts/create-feature-branch.sh
+
+      - name: Validate PR Branch Name
+        id: branch_validation
+        run: |
+          echo "branch_name=${GITHUB_HEAD_REF}" >> $GITHUB_OUTPUT
+          ./scripts/validate-workflow.sh branch-name "${GITHUB_HEAD_REF}"
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+
+      - name: Validate Single Issue Scope
+        id: issue_scope_validation
+        run: |
+          # Get all commits in this PR
+          COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.sha }})
+
+          # Extract issue numbers from commits
+          ISSUE_NUMBERS=()
+          for commit in $COMMITS; do
+            COMMIT_MSG=$(git log --format=%B -n 1 $commit)
+            ISSUE_NUM=$(echo "$COMMIT_MSG" | grep -oE '#[0-9]+' | head -1 | sed 's/#//')
+            if [[ -n "$ISSUE_NUM" ]]; then
+              ISSUE_NUMBERS+=("$ISSUE_NUM")
+            fi
+          done
+
+          # Remove duplicates and count unique issues
+          UNIQUE_ISSUES=($(printf "%s\n" "${ISSUE_NUMBERS[@]}" | sort -u))
+          ISSUE_COUNT=${#UNIQUE_ISSUES[@]}
+
+          echo "issue_count=$ISSUE_COUNT" >> $GITHUB_OUTPUT
+          echo "issues=${UNIQUE_ISSUES[*]}" >> $GITHUB_OUTPUT
+
+          if [[ $ISSUE_COUNT -gt 1 ]]; then
+            echo "❌ PR addresses multiple issues: ${UNIQUE_ISSUES[*]}"
+            echo "Consider splitting this PR into separate branches for each issue"
+            exit 1
+          elif [[ $ISSUE_COUNT -eq 1 ]]; then
+            echo "✅ PR properly scoped to single issue: #${UNIQUE_ISSUES[0]}"
+          else
+            echo "⚠️ No issue reference found in PR commits"
+          fi
+
+      - name: Validate PR Title and Description
+        id: pr_content_validation
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Check PR title format
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
+            echo "❌ PR title doesn't follow conventional format"
+            echo "Expected: <type>[optional scope]: <description>"
+            exit 1
+          fi
+
+          # Check for required PR sections (flexible matching)
+          MISSING_SECTIONS=()
+
+          # Check for Overview section (flexible - allows emojis and variations)
+          if [[ ! "$PR_BODY" =~ "Overview" ]]; then
+            MISSING_SECTIONS+=("## Overview")
+          fi
+
+          # Check for Implementation Details section
+          if [[ ! "$PR_BODY" =~ "Implementation Details" ]]; then
+            MISSING_SECTIONS+=("## Implementation Details")
+          fi
+
+          # Check for Testing section
+          if [[ ! "$PR_BODY" =~ "Testing" ]]; then
+            MISSING_SECTIONS+=("## Testing")
+          fi
+
+          # Check for Checklist section (flexible - Quality Assurance Checklist also acceptable)
+          if [[ ! "$PR_BODY" =~ "Checklist" ]]; then
+            MISSING_SECTIONS+=("## Checklist")
+          fi
+
+          if [[ ${#MISSING_SECTIONS[@]} -gt 0 ]]; then
+            echo "❌ PR description missing required sections:"
+            printf '%s\n' "${MISSING_SECTIONS[@]}"
+            echo "Use the PR template or run: gh pr create --template"
+            exit 1
+          fi
+
+          echo "✅ PR title and description are properly formatted"
+
+      - name: Check Commit Message Compliance
+        id: commit_validation
+        run: |
+          # Get all commits in this PR
+          COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.sha }})
+          INVALID_COMMITS=()
+
+          for commit in $COMMITS; do
+            COMMIT_MSG=$(git log --format=%B -n 1 $commit)
+            COMMIT_SUBJECT=$(git log --format=%s -n 1 $commit)
+            
+            # Skip merge commits
+            if [[ "$COMMIT_SUBJECT" =~ ^Merge.* ]]; then
+              continue
+            fi
+            
+            # Check conventional commit format
+            if [[ ! "$COMMIT_SUBJECT" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:\ .+ ]]; then
+              INVALID_COMMITS+=("$commit: $COMMIT_SUBJECT")
+            fi
+          done
+
+          if [[ ${#INVALID_COMMITS[@]} -gt 0 ]]; then
+            echo "❌ Found commits with invalid message format:"
+            printf '%s\n' "${INVALID_COMMITS[@]}"
+            echo "Fix with: git rebase -i origin/${{ github.base_ref }} and amend commit messages"
+            exit 1
+          fi
+
+          echo "✅ All commit messages follow conventional format"
+
+      - name: Run Code Quality Checks
+        id: quality_checks
+        run: |
+          echo "🔍 Running code quality checks..."
+
+          # TypeScript compilation
+          npm run type-check
+
+          # Linting (fail on errors, allow warnings)
+          npm run lint
+
+          # Code formatting check
+          npm run format:check
+
+          # Build verification
+          npm run build
+
+          echo "✅ All code quality checks passed"
+
+      - name: Run Tests with Coverage
+        id: test_coverage
+        run: |
+          echo "🧪 Running test suite with coverage..."
+          npm run test:coverage
+
+          # Extract coverage percentage (adjust path as needed)
+          if [[ -f coverage/coverage-summary.json ]]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+            echo "coverage_pct=$COVERAGE" >> $GITHUB_OUTPUT
+            
+            if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+              echo "❌ Test coverage below 80%: $COVERAGE%"
+              echo "Add more tests to improve coverage"
+              exit 1
+            fi
+            
+            echo "✅ Test coverage: $COVERAGE%"
+          else
+            echo "⚠️ Coverage report not found, skipping coverage check"
+          fi
+
+      - name: Check for Breaking Changes
+        id: breaking_changes
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          COMMITS=$(git rev-list origin/${{ github.base_ref }}..${{ github.sha }})
+          HAS_BREAKING=false
+
+          # Check for breaking change indicators
+          for commit in $COMMITS; do
+            COMMIT_MSG=$(git log --format=%B -n 1 $commit)
+            if [[ "$COMMIT_MSG" =~ "BREAKING CHANGE" ]] || [[ "$COMMIT_MSG" =~ "!" ]]; then
+              HAS_BREAKING=true
+              break
+            fi
+          done
+
+          if [[ "$HAS_BREAKING" == true ]]; then
+            if [[ ! "$PR_BODY" =~ "## Breaking Changes" ]]; then
+              echo "❌ Breaking changes detected but not documented in PR"
+              echo "Add a '## Breaking Changes' section to the PR description"
+              exit 1
+            fi
+            echo "⚠️ Breaking changes detected and documented"
+          fi
+
+          echo "has_breaking=$HAS_BREAKING" >> $GITHUB_OUTPUT
+
+      - name: Validate Issue Link
+        id: issue_link_validation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Extract issue numbers from PR body and commits
+          ISSUE_NUM=""
+
+          # Look for "Closes #123" or "Fixes #123" in PR body
+          if [[ "$PR_BODY" =~ (Closes|Fixes|Resolves)\ #([0-9]+) ]]; then
+            ISSUE_NUM="${BASH_REMATCH[2]}"
+          fi
+
+          if [[ -n "$ISSUE_NUM" ]]; then
+            echo "📋 Validating linked issue #$ISSUE_NUM..."
+            
+            # Check if issue exists and get details
+            if ! gh issue view "$ISSUE_NUM" --json title,state,assignees > /dev/null 2>&1; then
+              echo "❌ Referenced issue #$ISSUE_NUM does not exist or is not accessible"
+              exit 1
+            fi
+            
+            ISSUE_STATE=$(gh issue view "$ISSUE_NUM" --json state --jq '.state')
+            if [[ "$ISSUE_STATE" == "CLOSED" ]]; then
+              echo "⚠️ Referenced issue #$ISSUE_NUM is already closed"
+            fi
+            
+            echo "✅ Issue #$ISSUE_NUM exists and is accessible"
+          else
+            echo "⚠️ No issue reference found in PR body"
+            echo "Consider adding 'Closes #123' to link this PR to an issue"
+          fi
+
+      - name: Check for Required Files
+        id: required_files_check
+        run: |
+          REQUIRED_FILES=()
+          MISSING_FILES=()
+
+          # Check if new components have corresponding tests
+          NEW_COMPONENTS=$(git diff --name-only origin/${{ github.base_ref }}..HEAD | grep -E "src/components/.*\.(tsx?|jsx?)$" | head -10)
+
+          for component in $NEW_COMPONENTS; do
+            # Convert component path to test path
+            TEST_FILE=$(echo "$component" | sed 's/src\///' | sed 's/\.(tsx\?|jsx\?)$/.test.ts/')
+            SPEC_FILE="tests/$(basename "$component" | sed 's/\.(tsx\?|jsx\?)$/.spec.ts/')"
+            
+            if [[ ! -f "src/$TEST_FILE" && ! -f "$SPEC_FILE" ]]; then
+              MISSING_FILES+=("Test file for $component (expected: src/$TEST_FILE or $SPEC_FILE)")
+            fi
+          done
+
+          if [[ ${#MISSING_FILES[@]} -gt 0 ]]; then
+            echo "❌ Missing required test files:"
+            printf '%s\n' "${MISSING_FILES[@]}"
+            echo "Add tests for new components before merging"
+            exit 1
+          fi
+
+          echo "✅ All required files are present"
+
+      - name: Create PR Validation Summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Get step results
+            const steps = {
+              branch_validation: '${{ steps.branch_validation.outcome }}',
+              issue_scope_validation: '${{ steps.issue_scope_validation.outcome }}',
+              pr_content_validation: '${{ steps.pr_content_validation.outcome }}',
+              commit_validation: '${{ steps.commit_validation.outcome }}',
+              quality_checks: '${{ steps.quality_checks.outcome }}',
+              test_coverage: '${{ steps.test_coverage.outcome }}',
+              breaking_changes: '${{ steps.breaking_changes.outcome }}',
+              issue_link_validation: '${{ steps.issue_link_validation.outcome }}',
+              required_files_check: '${{ steps.required_files_check.outcome }}'
+            };
+
+            const coverage = '${{ steps.test_coverage.outputs.coverage_pct }}' || 'N/A';
+            const issueCount = '${{ steps.issue_scope_validation.outputs.issue_count }}' || '0';
+            const issues = '${{ steps.issue_scope_validation.outputs.issues }}' || '';
+            const hasBreaking = '${{ steps.breaking_changes.outputs.has_breaking }}' === 'true';
+
+            let summary = '## 🔍 PR Validation Summary\n\n';
+
+            // Overall status
+            const failedSteps = Object.entries(steps).filter(([_, outcome]) => outcome === 'failure');
+            const allPassed = failedSteps.length === 0;
+
+            if (allPassed) {
+              summary += '✅ **All validation checks passed!** This PR is ready for review.\n\n';
+            } else {
+              summary += `❌ **${failedSteps.length} validation check(s) failed.** Please address the issues below.\n\n`;
+            }
+
+            // Detailed results
+            summary += '### Validation Results\n\n';
+            summary += `| Check | Status | Details |\n`;
+            summary += `|-------|--------|----------|\n`;
+            summary += `| Branch Naming | ${steps.branch_validation === 'success' ? '✅' : '❌'} | Branch follows naming conventions |\n`;
+            summary += `| Single Issue Scope | ${steps.issue_scope_validation === 'success' ? '✅' : '❌'} | ${issueCount} issue(s) referenced: ${issues} |\n`;
+            summary += `| PR Content | ${steps.pr_content_validation === 'success' ? '✅' : '❌'} | Title and description format |\n`;
+            summary += `| Commit Messages | ${steps.commit_validation === 'success' ? '✅' : '❌'} | Conventional commit format |\n`;
+            summary += `| Code Quality | ${steps.quality_checks === 'success' ? '✅' : '❌'} | TypeScript, ESLint, formatting, build |\n`;
+            summary += `| Test Coverage | ${steps.test_coverage === 'success' ? '✅' : '❌'} | Coverage: ${coverage}% |\n`;
+            summary += `| Breaking Changes | ${steps.breaking_changes === 'success' ? '✅' : '❌'} | ${hasBreaking ? 'Breaking changes documented' : 'No breaking changes'} |\n`;
+            summary += `| Issue Linking | ${steps.issue_link_validation === 'success' ? '✅' : '❌'} | GitHub issue properly linked |\n`;
+            summary += `| Required Files | ${steps.required_files_check === 'success' ? '✅' : '❌'} | All required files present |\n`;
+
+            if (!allPassed) {
+              summary += '\n### 🛠️ How to Fix Issues\n\n';
+              summary += '1. **Branch naming**: Use format `type/description-issue-123`\n';
+              summary += '2. **Multiple issues**: Split PR into separate branches per issue\n';
+              summary += '3. **PR format**: Use the PR template with required sections\n';
+              summary += '4. **Commits**: Follow conventional commit format `type: description`\n';
+              summary += '5. **Code quality**: Run `npm run lint:fix && npm run format`\n';
+              summary += '6. **Tests**: Add tests for new components and features\n';
+              summary += '7. **Issue linking**: Add `Closes #123` to PR description\n\n';
+              summary += '**Need help?** Check [DEVELOPMENT_WORKFLOW.md](./docs/DEVELOPMENT_WORKFLOW.md) for detailed guidance.\n';
+            }
+
+            // Add workflow tips
+            summary += '\n### 💡 Workflow Tips\n\n';
+            summary += '- Use `./scripts/create-feature-branch.sh` for automatic branch creation\n';
+            summary += '- Run `./scripts/validate-workflow.sh` locally before pushing\n';
+            summary += '- Pre-commit hooks will catch most issues automatically\n';
+            summary += '- Follow the [development workflow](./docs/DEVELOPMENT_WORKFLOW.md) for best practices\n';
+
+            // Post comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+      - name: Fail if validation errors found
+        if: failure()
+        run: |
+          echo "❌ PR validation failed. Please check the validation summary comment above."
+          echo "Fix the identified issues and push updates to re-trigger validation."
+          exit 1

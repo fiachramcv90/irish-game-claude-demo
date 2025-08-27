@@ -1,0 +1,42 @@
+# Title: <type>: <description> (Issue #123)
+# |<----  Using a Maximum Of 50 Characters  ---->|
+
+# Body: Explain *what* and *why* (not *how*). Include issue link.
+# |<----   Try To Limit Each Line to a Maximum Of 72 Characters   ---->|
+
+# === TYPES ===
+# feat:     A new feature for the user, not a new feature for build script
+# fix:      A bug fix for the user, not a fix to a build script
+# docs:     Changes to the documentation
+# style:    Formatting, missing semi colons, etc; no production code change
+# refactor: Refactoring production code, eg. renaming a variable
+# test:     Adding missing tests, refactoring tests; no production code change
+# chore:    Updating grunt tasks etc; no production code change
+
+# === EXAMPLE ===
+# feat: add volume control component (Issue #123)
+#
+# - Implement volume slider with range input
+# - Add mute/unmute toggle button
+# - Persist volume level in localStorage
+# - Add keyboard shortcuts (M for mute, +/- for volume)
+#
+# This addresses user feedback about audio being too loud by default
+# and provides better accessibility for audio control.
+#
+# Closes #123
+#
+# 🤖 Generated with [Claude Code](https://claude.ai/code)
+#
+# Co-Authored-By: Claude <noreply@anthropic.com>
+
+# === FORMAT ===
+# <type>: <description> (Issue #123)
+# 
+# [Body - explain what and why]
+# 
+# Closes #123
+# 
+# 🤖 Generated with [Claude Code](https://claude.ai/code)
+# 
+# Co-Authored-By: Claude <noreply@anthropic.com>
