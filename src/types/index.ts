@@ -363,9 +363,6 @@ export interface AudioContextType {
   setVolume: (volume: number) => void;
   isMuted: boolean;
   toggleMute: () => void;
-  errorState: import('../types/audio-errors').AudioErrorState;
-  clearErrors: () => void;
-  retryFailedAudio: (audioId: string) => Promise<void>;
 }
 
 export interface ProgressContextType {
