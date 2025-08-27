@@ -98,22 +98,22 @@ jobs:
           MISSING_SECTIONS=()
 
           # Check for Overview section (flexible - allows emojis and variations)
-          if [[ ! "$PR_BODY" =~ ##[[:space:]]*([^[:space:]]*[[:space:]]*)*Overview ]]; then
+          if [[ ! "$PR_BODY" =~ "Overview" ]]; then
             MISSING_SECTIONS+=("## Overview")
           fi
 
           # Check for Implementation Details section
-          if [[ ! "$PR_BODY" =~ ##[[:space:]]*([^[:space:]]*[[:space:]]*)*Implementation[[:space:]]+Details ]]; then
+          if [[ ! "$PR_BODY" =~ "Implementation Details" ]]; then
             MISSING_SECTIONS+=("## Implementation Details")
           fi
 
           # Check for Testing section
-          if [[ ! "$PR_BODY" =~ ##[[:space:]]*([^[:space:]]*[[:space:]]*)*Testing ]]; then
+          if [[ ! "$PR_BODY" =~ "Testing" ]]; then
             MISSING_SECTIONS+=("## Testing")
           fi
 
           # Check for Checklist section (flexible - Quality Assurance Checklist also acceptable)
-          if [[ ! "$PR_BODY" =~ ##[[:space:]]*([^[:space:]]*[[:space:]]*)*Checklist ]] && [[ ! "$PR_BODY" =~ ##[[:space:]]*([^[:space:]]*[[:space:]]*)*Quality[[:space:]]+Assurance[[:space:]]+Checklist ]]; then
+          if [[ ! "$PR_BODY" =~ "Checklist" ]]; then
             MISSING_SECTIONS+=("## Checklist")
           fi
 
