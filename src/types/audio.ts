@@ -56,6 +56,8 @@ export interface AudioManagerEvents {
     failed: string[]
   ) => void;
   onPreloadCancel?: (preloadId: string) => void;
+  onVolumeChange?: (volume: number) => void;
+  onMute?: (muted: boolean) => void;
 }
 
 export interface PreloadOptions {
