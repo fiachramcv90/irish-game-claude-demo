@@ -29,6 +29,10 @@ export class AudioManager implements AudioManagerInterface {
   private preloadQueues = new Map<string, PreloadQueue>();
   private preloadCounter = 0;
 
+  // Storage keys for persisting audio settings
+  private static readonly VOLUME_STORAGE_KEY = 'irish-game-audio-volume';
+  private static readonly MUTED_STORAGE_KEY = 'irish-game-audio-muted';
+
   constructor(config: AudioManagerConfig = {}) {
     this.config = {
       defaultVolume: config.defaultVolume ?? 0.8,
@@ -37,7 +41,8 @@ export class AudioManager implements AudioManagerInterface {
       fadeDuration: config.fadeDuration ?? 300,
     };
 
-    this.masterVolume = this.config.defaultVolume;
+    // Load persisted settings or use defaults
+    this.loadVolumeSettings();
   }
 
   /**
@@ -551,6 +556,12 @@ export class AudioManager implements AudioManagerInterface {
         audioFile.element.volume = this.masterVolume;
       }
     });
+
+    // Persist volume setting
+    this.saveVolumeSettings();
+
+    // Emit volume change event
+    this.emit('onVolumeChange', this.masterVolume);
   }
 
   /**
@@ -568,6 +579,12 @@ export class AudioManager implements AudioManagerInterface {
     this.audioFiles.forEach(audioFile => {
       audioFile.element.volume = 0;
     });
+
+    // Persist muted state
+    this.saveVolumeSettings();
+
+    // Emit mute event
+    this.emit('onMute', true);
   }
 
   /**
@@ -578,6 +595,12 @@ export class AudioManager implements AudioManagerInterface {
     this.audioFiles.forEach(audioFile => {
       audioFile.element.volume = this.masterVolume;
     });
+
+    // Persist muted state
+    this.saveVolumeSettings();
+
+    // Emit mute event
+    this.emit('onMute', false);
   }
 
   /**
@@ -670,6 +693,57 @@ export class AudioManager implements AudioManagerInterface {
           console.error(`Error in audio event listener for "${event}":`, error);
         }
       });
+    }
+  }
+
+  /**
+   * Load volume settings from localStorage
+   */
+  private loadVolumeSettings(): void {
+    try {
+      // Load master volume
+      const savedVolume = localStorage.getItem(AudioManager.VOLUME_STORAGE_KEY);
+      if (savedVolume !== null) {
+        const volume = parseFloat(savedVolume);
+        if (!isNaN(volume) && volume >= 0 && volume <= 1) {
+          this.masterVolume = volume;
+        } else {
+          this.masterVolume = this.config.defaultVolume;
+        }
+      } else {
+        this.masterVolume = this.config.defaultVolume;
+      }
+
+      // Load muted state
+      const savedMuted = localStorage.getItem(AudioManager.MUTED_STORAGE_KEY);
+      if (savedMuted !== null) {
+        this.muted = savedMuted === 'true';
+      } else {
+        this.muted = false;
+      }
+    } catch (error) {
+      // Fallback to defaults if localStorage is not available
+      console.warn('Failed to load audio settings from localStorage:', error);
+      this.masterVolume = this.config.defaultVolume;
+      this.muted = false;
+    }
+  }
+
+  /**
+   * Save volume settings to localStorage
+   */
+  private saveVolumeSettings(): void {
+    try {
+      localStorage.setItem(
+        AudioManager.VOLUME_STORAGE_KEY,
+        this.masterVolume.toString()
+      );
+      localStorage.setItem(
+        AudioManager.MUTED_STORAGE_KEY,
+        this.muted.toString()
+      );
+    } catch (error) {
+      console.warn('Failed to save audio settings to localStorage:', error);
     }
   }
 }
