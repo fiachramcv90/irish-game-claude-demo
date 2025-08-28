@@ -225,7 +225,84 @@ EOF
 - [ ] Related issues referenced
 - [ ] Breaking changes noted (if any)
 
-### 9. **Quality Assurance Checklist**
+### 9. **Claude Code Review Process** ⚡
+
+**Wait for Automated Code Review:**
+
+After creating the PR, the automated Claude review will run. **Always wait for and address Claude's feedback before proceeding.**
+
+```bash
+# Check PR status and wait for Claude review
+gh pr checks
+
+# Wait for claude-review to complete (usually 2-3 minutes)
+# Status will show: claude-review [pass|fail]
+```
+
+**Address Claude Review Feedback:**
+
+When Claude provides feedback, systematically address all recommendations:
+
+1. **Critical Issues** (Must Fix):
+   - Memory leaks or resource cleanup problems
+   - Security vulnerabilities or data exposure risks
+   - Performance bottlenecks that impact user experience
+   - Race conditions or concurrency issues
+   - Type safety violations or runtime errors
+
+2. **Important Improvements** (Strongly Recommended):
+   - Code quality and maintainability issues
+   - Best practice violations
+   - Missing error handling
+   - Accessibility concerns
+   - Testing gaps
+
+3. **Enhancement Suggestions** (Consider):
+   - Performance optimizations
+   - Code organization improvements
+   - Documentation enhancements
+   - Future-proofing recommendations
+
+**Implementation Process:**
+
+```bash
+# Create todo list for review items
+# Address each item systematically
+git add .
+git commit -m "fix: address Claude review feedback
+
+- Fix memory leak in component cleanup
+- Add error handling for edge cases
+- Improve performance with memoization
+- Add missing accessibility attributes
+
+Addresses Claude's comprehensive code review"
+
+git push
+```
+
+**Re-run Review Process:**
+
+```bash
+# Wait for updated review
+gh pr checks
+
+# Continue until Claude review passes
+# Only proceed to merge when all critical items addressed
+```
+
+**Review Completion Checklist:**
+
+- [ ] Claude review completed and passing
+- [ ] All critical issues resolved
+- [ ] Important improvements implemented
+- [ ] Performance concerns addressed
+- [ ] Security recommendations followed
+- [ ] Memory leaks fixed
+- [ ] Error handling improved
+- [ ] Tests updated for changes
+
+### 10. **Quality Assurance Checklist**
 
 **Before requesting review:**
 
@@ -237,7 +314,7 @@ EOF
 - [ ] Accessibility requirements met
 - [ ] Performance considerations addressed
 
-### 10. **Post-Merge Cleanup**
+### 11. **Post-Merge Cleanup**
 
 **After PR is merged:**
 
@@ -263,6 +340,8 @@ git remote prune origin               # Clean up remote tracking branches
 - Address ESLint errors (warnings can be addressed later)
 - Ensure production build succeeds before committing
 - Maintain comprehensive test coverage
+- **Always wait for and address Claude review feedback**
+- Never merge PRs with unresolved critical review items
 
 ### **Follow Project Conventions**
 
@@ -283,6 +362,8 @@ git remote prune origin               # Clean up remote tracking branches
 - **Don't** commit without running quality checks
 - **Don't** create new files when editing existing ones would suffice
 - **Don't** merge PRs with failing tests or linting errors
+- **Don't** merge PRs without addressing Claude review feedback
+- **Don't** ignore memory leaks or performance issues flagged by Claude
 - **Don't** leave TODO comments in committed code
 - **Don't** commit package-lock.json changes unless adding dependencies
 - **Don't** push directly to main branch
@@ -330,8 +411,18 @@ npx playwright test --ui      # Run Playwright with UI
 ```bash
 gh issue view <number>         # View issue details
 gh pr create                   # Create pull request
-gh pr checks                   # Check PR status
-gh pr merge                    # Merge pull request
+gh pr checks                   # Check PR status and Claude review
+gh pr view --comments          # View Claude review feedback
+gh pr merge                    # Merge pull request (only after Claude review)
+```
+
+### Claude Code Review
+
+```bash
+gh pr checks                   # Monitor Claude review progress
+gh pr view --comments          # Read Claude's detailed feedback
+# Address feedback, commit changes, push
+gh pr checks                   # Verify Claude review passes
 ```
 
 ---
