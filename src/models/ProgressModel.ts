@@ -45,7 +45,16 @@ export class ProgressModel {
   public legacyProgress: UserProgress;
 
   constructor(playerId: string, existingData?: Partial<ProgressModel>) {
-    this.playerId = playerId;
+    // Input validation
+    if (
+      !playerId ||
+      typeof playerId !== 'string' ||
+      playerId.trim().length === 0
+    ) {
+      throw new Error('Invalid playerId: must be a non-empty string');
+    }
+
+    this.playerId = playerId.trim();
     this.createdAt = existingData?.createdAt || new Date();
     this.lastUpdatedAt = new Date();
 
@@ -72,12 +81,19 @@ export class ProgressModel {
    * Add a completed game session and update all related metrics
    */
   public addGameSession(session: DetailedGameSession): void {
-    // Add to history
+    // Validate input
+    if (!session || !session.id) {
+      throw new Error('Invalid session: session must have an id');
+    }
+
+    // Add to history with atomic operation to prevent race conditions
     this.gameHistory.push(session);
 
-    // Maintain session history limit (last 500 sessions)
+    // Maintain session history limit (last 500 sessions) with safe trimming
     if (this.gameHistory.length > 500) {
-      this.gameHistory = this.gameHistory.slice(-500);
+      // Create new array instead of modifying in place to prevent race conditions
+      const newHistory = [...this.gameHistory];
+      this.gameHistory = newHistory.slice(-500);
     }
 
     // Update learning metrics
@@ -109,6 +125,32 @@ export class ProgressModel {
       gameContext?: unknown;
     }
   ): void {
+    // Input validation
+    if (!item || !item.id) {
+      throw new Error('Invalid vocabulary item: item must have an id');
+    }
+
+    if (response === null || response === undefined) {
+      throw new Error('Invalid response: response cannot be null or undefined');
+    }
+
+    if (typeof response.isCorrect !== 'boolean') {
+      throw new Error('Invalid response: isCorrect must be a boolean');
+    }
+
+    if (
+      response.responseTime !== undefined &&
+      (response.responseTime < 0 || !Number.isFinite(response.responseTime))
+    ) {
+      response.responseTime = 0;
+    }
+
+    if (
+      response.hintsUsed !== undefined &&
+      (response.hintsUsed < 0 || !Number.isInteger(response.hintsUsed))
+    ) {
+      response.hintsUsed = 0;
+    }
     let masteryData = this.vocabularyMastery.get(item.id);
 
     if (!masteryData) {
@@ -140,7 +182,7 @@ export class ProgressModel {
     masteryData.masteryLevel = this.calculateMasteryLevel(masteryData);
     masteryData.confidence = this.calculateConfidenceLevel(masteryData);
 
-    // Add performance history entry
+    // Add performance history entry with memory management
     masteryData.performanceHistory.push({
       date: new Date(),
       gameType: (response.gameType as GameType) || 'card-match',
@@ -157,6 +199,12 @@ export class ProgressModel {
       masteryScore: masteryData.masteryScore,
     });
 
+    // Prevent memory leaks by limiting performance history size (keep last 100 entries)
+    if (masteryData.performanceHistory.length > 100) {
+      masteryData.performanceHistory =
+        masteryData.performanceHistory.slice(-100);
+    }
+
     // Update next review date using spaced repetition algorithm
     masteryData.nextReviewDate = this.calculateNextReviewDate(masteryData);
 
@@ -171,6 +219,27 @@ export class ProgressModel {
     definition: AchievementDefinition,
     newProgress: number
   ): void {
+    // Input validation
+    if (!achievementId || typeof achievementId !== 'string') {
+      throw new Error('Invalid achievementId: must be a non-empty string');
+    }
+
+    if (!definition || !definition.id) {
+      throw new Error('Invalid achievement definition: must have an id');
+    }
+
+    if (
+      typeof newProgress !== 'number' ||
+      !Number.isFinite(newProgress) ||
+      newProgress < 0
+    ) {
+      throw new Error(
+        'Invalid progress value: must be a finite positive number'
+      );
+    }
+
+    // Clamp progress to valid range
+    newProgress = Math.min(Math.max(newProgress, 0), 100);
     let progress = this.achievementProgress.get(achievementId);
 
     if (!progress) {
@@ -243,6 +312,14 @@ export class ProgressModel {
    * Get items that need review based on spaced repetition
    */
   public getItemsForReview(limit: number = 10): VocabularyMasteryData[] {
+    // Input validation
+    if (typeof limit !== 'number' || !Number.isInteger(limit) || limit < 0) {
+      console.warn('Invalid limit parameter, using default value of 10');
+      limit = 10;
+    }
+
+    // Clamp limit to reasonable range
+    limit = Math.min(limit, 1000); // Max 1000 items
     const now = new Date();
     const itemsForReview: VocabularyMasteryData[] = [];
 
@@ -266,27 +343,68 @@ export class ProgressModel {
    * Export progress data for backup/sharing
    */
   public exportData(): string {
-    const exportData = {
-      version: this.version,
-      playerId: this.playerId,
-      createdAt: this.createdAt,
-      lastUpdatedAt: this.lastUpdatedAt,
-      learningMetrics: this.learningMetrics,
-      vocabularyMastery: Array.from(this.vocabularyMastery.entries()),
-      achievementProgress: Array.from(this.achievementProgress.entries()),
-      achievementStatistics: this.achievementStatistics,
-      legacyProgress: this.legacyProgress,
-      gameHistory: this.gameHistory.slice(-100), // Last 100 sessions only
-    };
+    try {
+      const exportData = {
+        version: this.version,
+        playerId: this.playerId,
+        createdAt: this.createdAt,
+        lastUpdatedAt: this.lastUpdatedAt,
+        learningMetrics: {
+          ...this.learningMetrics,
+          // Handle potential Infinity values in serialization
+          fastestResponseTime:
+            this.learningMetrics.fastestResponseTime === Number.MAX_SAFE_INTEGER
+              ? null
+              : this.learningMetrics.fastestResponseTime,
+        },
+        vocabularyMastery: Array.from(this.vocabularyMastery.entries()),
+        achievementProgress: Array.from(this.achievementProgress.entries()),
+        achievementStatistics: this.achievementStatistics,
+        legacyProgress: this.legacyProgress,
+        gameHistory: this.gameHistory.slice(-100), // Last 100 sessions only
+      };
 
-    return JSON.stringify(exportData, null, 2);
+      return JSON.stringify(
+        exportData,
+        (_key, value) => {
+          // Handle any remaining Infinity or NaN values during serialization
+          if (typeof value === 'number') {
+            if (!Number.isFinite(value)) {
+              return null;
+            }
+          }
+          return value;
+        },
+        2
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to export progress data: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
   }
 
   /**
    * Import progress data from backup
    */
   public static importData(jsonData: string): ProgressModel {
-    const data = JSON.parse(jsonData);
+    // Input validation
+    if (!jsonData || typeof jsonData !== 'string') {
+      throw new Error('Invalid JSON data: must be a non-empty string');
+    }
+
+    let data;
+    try {
+      data = JSON.parse(jsonData);
+    } catch (error) {
+      throw new Error(
+        `Invalid JSON format: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+
+    if (!data || typeof data !== 'object' || !data.playerId) {
+      throw new Error('Invalid progress data: missing required playerId field');
+    }
 
     // Create new instance with imported data
     const progressModel = new ProgressModel(data.playerId, {
@@ -316,7 +434,7 @@ export class ProgressModel {
     return {
       sessionDuration: 0,
       averageResponseTime: 0,
-      fastestResponseTime: Infinity,
+      fastestResponseTime: Number.MAX_SAFE_INTEGER, // Use safe integer instead of Infinity
       slowestResponseTime: 0,
       timeToMastery: 0,
       overallAccuracy: 0,
@@ -682,10 +800,12 @@ export class ProgressModel {
         responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
       metrics.averageResponseTime =
         (metrics.averageResponseTime + avgResponseTime) / 2;
-      metrics.fastestResponseTime = Math.min(
-        metrics.fastestResponseTime,
-        Math.min(...responseTimes)
-      );
+      const minResponseTime = Math.min(...responseTimes);
+      // Handle safe integer comparison instead of Infinity
+      metrics.fastestResponseTime =
+        metrics.fastestResponseTime === Number.MAX_SAFE_INTEGER
+          ? minResponseTime
+          : Math.min(metrics.fastestResponseTime, minResponseTime);
       metrics.slowestResponseTime = Math.max(
         metrics.slowestResponseTime,
         Math.max(...responseTimes)
@@ -781,9 +901,25 @@ export class ProgressModel {
   }
 
   private calculateMasteryScore(masteryData: VocabularyMasteryData): number {
+    if (!masteryData) {
+      throw new Error('Invalid masteryData: cannot be null or undefined');
+    }
+
     const { totalAttempts, correctAttempts, hintsUsed } = masteryData;
 
+    // Input validation
+    if (totalAttempts < 0 || correctAttempts < 0 || hintsUsed < 0) {
+      console.warn(
+        'Invalid mastery data values detected, resetting to safe defaults'
+      );
+      return 0;
+    }
+
     if (totalAttempts === 0) return 0;
+    if (correctAttempts > totalAttempts) {
+      console.warn('correctAttempts > totalAttempts, clamping correctAttempts');
+      masteryData.correctAttempts = totalAttempts;
+    }
 
     // Base score from accuracy
     const accuracy = (correctAttempts / totalAttempts) * 100;
@@ -838,8 +974,18 @@ export class ProgressModel {
   }
 
   private calculateNextReviewDate(masteryData: VocabularyMasteryData): Date {
+    if (!masteryData) {
+      throw new Error('Invalid masteryData: cannot be null or undefined');
+    }
+
     const now = new Date();
     let intervalDays = masteryData.reviewInterval;
+
+    // Validate and clamp interval days
+    if (intervalDays < 1 || !Number.isFinite(intervalDays)) {
+      intervalDays = 1;
+    }
+    intervalDays = Math.min(intervalDays, 365); // Max 1 year interval
 
     // Adjust interval based on mastery level and recent performance
     switch (masteryData.masteryLevel) {
@@ -876,8 +1022,21 @@ export class ProgressModel {
 
     masteryData.reviewInterval = intervalDays;
 
-    const nextReview = new Date(now);
-    nextReview.setDate(nextReview.getDate() + intervalDays);
+    // Use proper date arithmetic to handle month boundaries correctly
+    const nextReview = new Date(now.getTime());
+    nextReview.setTime(
+      nextReview.getTime() + intervalDays * 24 * 60 * 60 * 1000
+    );
+
+    // Ensure the result is a valid date
+    if (isNaN(nextReview.getTime())) {
+      console.warn(
+        'Invalid date calculated in calculateNextReviewDate, using default'
+      );
+      const fallbackDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1 day from now
+      return fallbackDate;
+    }
+
     return nextReview;
   }
 
@@ -886,6 +1045,19 @@ export class ProgressModel {
     mistakeType: MistakeType,
     userAnswer: string
   ): void {
+    // Input validation
+    if (!masteryData) {
+      throw new Error('Invalid masteryData: cannot be null or undefined');
+    }
+
+    if (!mistakeType) {
+      console.warn('Invalid mistakeType, skipping mistake pattern update');
+      return;
+    }
+
+    if (typeof userAnswer !== 'string') {
+      userAnswer = String(userAnswer || '');
+    }
     let pattern = masteryData.mistakePatterns.find(p => p.type === mistakeType);
 
     if (!pattern) {
