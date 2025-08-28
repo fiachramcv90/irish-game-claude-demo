@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import {
   MobileAudioDetector,
@@ -41,16 +41,24 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
 
   const unlockManagerRef = useRef(TouchUnlockManager.getInstance());
   const updateTimeoutRef = useRef<number | undefined>(undefined);
+  const updateDebounceRef = useRef<number | undefined>(undefined);
 
-  // Update unlock state periodically
+  // Update unlock state with debouncing to prevent race conditions
   const updateUnlockState = useCallback(() => {
-    const currentState = unlockManagerRef.current.getUnlockState();
-    setUnlockState(currentState);
+    // Clear any pending debounced update
+    if (updateDebounceRef.current) {
+      window.clearTimeout(updateDebounceRef.current);
+    }
 
-    // Check if audio is ready
-    const ready =
-      !capabilities.requiresUserInteraction || currentState.isUnlocked;
-    setIsReady(ready);
+    updateDebounceRef.current = window.setTimeout(() => {
+      const currentState = unlockManagerRef.current.getUnlockState();
+      setUnlockState(currentState);
+
+      // Check if audio is ready
+      const ready =
+        !capabilities.requiresUserInteraction || currentState.isUnlocked;
+      setIsReady(ready);
+    }, 100); // 100ms debounce
   }, [capabilities.requiresUserInteraction]);
 
   // Initialize mobile audio system
@@ -88,6 +96,10 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
       if (updateTimeoutRef.current) {
         window.clearInterval(updateTimeoutRef.current);
         updateTimeoutRef.current = undefined;
+      }
+      if (updateDebounceRef.current) {
+        window.clearTimeout(updateDebounceRef.current);
+        updateDebounceRef.current = undefined;
       }
     };
   }, [updateUnlockState]);
@@ -221,8 +233,14 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
     updateUnlockState,
   ]);
 
-  const needsUnlock = MobileAudioUtils.requiresTouchUnlock();
-  const unlockMessage = MobileAudioUtils.getUnlockMessage();
+  const needsUnlock = useMemo(
+    () => MobileAudioUtils.requiresTouchUnlock(),
+    [unlockState]
+  );
+  const unlockMessage = useMemo(
+    () => MobileAudioUtils.getUnlockMessage(),
+    [capabilities]
+  );
 
   return {
     // State

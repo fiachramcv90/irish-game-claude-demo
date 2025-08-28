@@ -280,7 +280,15 @@ export class TouchUnlockManager {
     const unlockOnTouch = () => {
       if (!this.unlockState.hasTouched) {
         this.unlockState.hasTouched = true;
-        this.unlockAudio().catch(console.error);
+        this.unlockAudio().catch(error => {
+          console.error('Failed to unlock audio on touch:', error);
+          // Dispatch error event for UI to handle
+          window.dispatchEvent(
+            new CustomEvent('mobileAudio:unlockError', {
+              detail: { error: error.message },
+            })
+          );
+        });
       }
     };
 
@@ -318,6 +326,7 @@ export class TouchUnlockManager {
  */
 export class MobilePerformanceOptimizer {
   private static isOptimized = false;
+  private static memoryCheckInterval: number | undefined;
 
   static optimizeForMobile(): void {
     if (this.isOptimized) return;
@@ -352,7 +361,7 @@ export class MobilePerformanceOptimizer {
         }
       };
 
-      setInterval(checkMemory, 30000); // Check every 30 seconds
+      this.memoryCheckInterval = window.setInterval(checkMemory, 30000); // Check every 30 seconds
     }
   }
 
@@ -378,6 +387,17 @@ export class MobilePerformanceOptimizer {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+  }
+
+  /**
+   * Cleanup mobile optimizations when no longer needed
+   */
+  static cleanup(): void {
+    if (this.memoryCheckInterval) {
+      window.clearInterval(this.memoryCheckInterval);
+      this.memoryCheckInterval = undefined;
+    }
+    this.isOptimized = false;
   }
 }
 
