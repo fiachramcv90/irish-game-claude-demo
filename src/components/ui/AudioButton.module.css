@@ -176,6 +176,122 @@
   }
 }
 
+/* Mobile-specific styles */
+.mobile {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.mobile:active {
+  transform: scale(0.95);
+}
+
+.ios {
+  -webkit-appearance: none;
+  border-radius: 50%;
+}
+
+.android {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Touch unlock indicator */
+.needsUnlock {
+  --button-bg: #f97316;
+  --button-bg-hover: #ea580c;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.needsUnlock::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid #f97316;
+  border-radius: 50%;
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes glow {
+  0% {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 0 0 rgba(249, 115, 22, 0.4);
+  }
+  100% {
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.15),
+      0 0 20px rgba(249, 115, 22, 0.6);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* Mobile responsive sizing */
+@media (max-width: 768px) {
+  .small {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .medium {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+
+  .large {
+    width: 72px;
+    height: 72px;
+    min-width: 72px;
+    min-height: 72px;
+  }
+
+  .audioButton {
+    /* Larger touch targets on mobile */
+    padding: 4px;
+  }
+
+  .audioButton:hover {
+    /* Reduce hover effects on mobile (touch devices) */
+    transform: none;
+  }
+}
+
+/* Orientation change handling */
+@media (orientation: landscape) and (max-height: 500px) {
+  .large {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+}
+
+/* High DPI displays (mobile) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .audioButton {
+    border-width: 0.5px;
+  }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   .audioButton {
@@ -187,6 +303,14 @@
   }
 
   .error {
+    animation: none;
+  }
+
+  .needsUnlock {
+    animation: none;
+  }
+
+  .needsUnlock::after {
     animation: none;
   }
 }
