@@ -113,7 +113,9 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
       // Prevent click event from firing after touch on mobile
       if (mobile.capabilities.isMobile) {
         event.preventDefault();
-        handleClick();
+        handleClick().catch(error => {
+          console.error('AudioButton: Touch event handler error:', error);
+        });
       }
     },
     [handleClick, mobile.capabilities.isMobile]

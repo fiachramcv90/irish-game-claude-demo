@@ -38,9 +38,12 @@ export function useAudio() {
         if (options?.volume !== undefined) {
           const currentVolume = context.audioManager.getMasterVolume();
           context.audioManager.setMasterVolume(options.volume);
-          await context.playAudio(audioId);
-          // Reset volume after play
-          context.audioManager.setMasterVolume(currentVolume);
+          try {
+            await context.playAudio(audioId);
+          } finally {
+            // Always restore volume even if playAudio throws
+            context.audioManager.setMasterVolume(currentVolume);
+          }
         } else {
           await context.playAudio(audioId);
         }

@@ -381,3 +381,6 @@ export function AudioProvider({ children }: AudioProviderProps) {
     </AudioContext.Provider>
   );
 }
+
+// Export the context for use in hooks
+export { AudioContext };
