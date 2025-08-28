@@ -366,6 +366,8 @@ export interface AudioContextType {
   errorState: import('../types/audio-errors').AudioErrorState;
   clearErrors: () => void;
   retryFailedAudio: (audioId: string) => Promise<void>;
+  // Enhanced functionality - expose AudioManager instance
+  audioManager: import('../types/audio').AudioManagerInterface;
 }
 
 export interface ProgressContextType {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useAudio } from '../../contexts/AudioContext';
-import { useMobileAudio } from '../../hooks/useMobileAudio';
+import { useAudio } from '../../hooks/useAudio';
 import type { AudioError } from '../../types/audio-errors';
 
 import styles from './AudioButton.module.css';
@@ -33,9 +32,7 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
   'aria-label': ariaLabel,
   'data-testid': testId,
 }) => {
-  const { playAudio, stopAll, errorState } = useAudio();
-  const { capabilities, needsUnlock, unlockMessage, unlockAudio, handleTouch } =
-    useMobileAudio();
+  const { stopAll, errorState, mobile, playWithMobileUnlock } = useAudio();
 
   const [buttonState, setButtonState] = useState<AudioButtonState>('idle');
   const [isCurrentlyPlaying, setIsCurrentlyPlaying] = useState(false);
@@ -58,21 +55,6 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
     if (disabled || buttonState === 'loading') return;
 
     try {
-      // Handle mobile audio unlock first
-      if (needsUnlock) {
-        if (import.meta.env.DEV) {
-          console.log('🔓 Attempting to unlock mobile audio...');
-        }
-        const unlocked = await unlockAudio();
-        if (!unlocked) {
-          if (import.meta.env.DEV) {
-            console.warn('❌ Failed to unlock audio on mobile device');
-          }
-          setButtonState('error');
-          return;
-        }
-      }
-
       if (isCurrentlyPlaying) {
         stopAll();
         setIsCurrentlyPlaying(false);
@@ -80,7 +62,8 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
         onPause?.();
       } else {
         setButtonState('loading');
-        await playAudio(audioId);
+        // Use the mobile-aware play method that handles unlock automatically
+        await playWithMobileUnlock(audioId);
         setIsCurrentlyPlaying(true);
         setButtonState('playing');
         onPlay?.();
@@ -93,12 +76,10 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
   }, [
     disabled,
     buttonState,
-    needsUnlock,
-    unlockAudio,
     isCurrentlyPlaying,
     stopAll,
     onPause,
-    playAudio,
+    playWithMobileUnlock,
     audioId,
     onPlay,
   ]);
@@ -117,25 +98,27 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
   const handleTouchStart = useCallback(
     (event: React.TouchEvent) => {
       // Handle mobile audio unlock on touch
-      handleTouch();
+      mobile.handleTouch();
 
       // Prevent default to avoid double-tap zoom on iOS
-      if (capabilities.isIOS) {
+      if (mobile.capabilities.isIOS) {
         event.preventDefault();
       }
     },
-    [handleTouch, capabilities.isIOS]
+    [mobile]
   );
 
   const handleTouchEnd = useCallback(
     (event: React.TouchEvent) => {
       // Prevent click event from firing after touch on mobile
-      if (capabilities.isMobile) {
+      if (mobile.capabilities.isMobile) {
         event.preventDefault();
-        handleClick();
+        handleClick().catch(error => {
+          console.error('AudioButton: Touch event handler error:', error);
+        });
       }
     },
-    [handleClick, capabilities.isMobile]
+    [handleClick, mobile.capabilities.isMobile]
   );
 
   const getIcon = () => {
@@ -171,8 +154,8 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
     if (ariaLabel) return ariaLabel;
 
     // Show mobile-specific unlock message if needed
-    if (needsUnlock) {
-      return unlockMessage;
+    if (mobile.needsUnlock) {
+      return mobile.unlockMessage;
     }
 
     switch (buttonState) {
@@ -193,10 +176,10 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
     styles[variant],
     styles[buttonState],
     disabled && styles.disabled,
-    needsUnlock && styles.needsUnlock,
-    capabilities.isMobile && styles.mobile,
-    capabilities.isIOS && styles.ios,
-    capabilities.isAndroid && styles.android,
+    mobile.needsUnlock && styles.needsUnlock,
+    mobile.capabilities.isMobile && styles.mobile,
+    mobile.capabilities.isIOS && styles.ios,
+    mobile.capabilities.isAndroid && styles.android,
     className,
   ]
     .filter(Boolean)
@@ -206,17 +189,17 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
     <button
       type='button'
       className={buttonClasses}
-      onClick={capabilities.isMobile ? undefined : handleClick}
-      onTouchStart={capabilities.isMobile ? handleTouchStart : undefined}
-      onTouchEnd={capabilities.isMobile ? handleTouchEnd : undefined}
+      onClick={mobile.capabilities.isMobile ? undefined : handleClick}
+      onTouchStart={mobile.capabilities.isMobile ? handleTouchStart : undefined}
+      onTouchEnd={mobile.capabilities.isMobile ? handleTouchEnd : undefined}
       onKeyDown={handleKeyDown}
       disabled={disabled || buttonState === 'loading'}
       aria-label={getAriaLabel()}
       aria-pressed={isCurrentlyPlaying}
       data-testid={testId || `audio-button-${audioId}`}
       data-state={buttonState}
-      data-mobile={capabilities.isMobile}
-      data-needs-unlock={needsUnlock}
+      data-mobile={mobile.capabilities.isMobile}
+      data-needs-unlock={mobile.needsUnlock}
     >
       {getIcon()}
       <span className={styles.visuallyHidden}>{getAriaLabel()}</span>

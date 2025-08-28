@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import { AUDIO_CONFIG } from '../constants/audio';
-import { useAudio } from '../contexts/AudioContext';
 import { useProgress } from '../contexts/ProgressContext';
+import { useAudio } from '../hooks/useAudioContext';
 
 import { Button } from './ui';
 

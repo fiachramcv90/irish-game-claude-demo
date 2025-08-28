@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { useAudio } from '../contexts/AudioContext';
 import { useProgress } from '../contexts/ProgressContext';
+import { useAudio } from '../hooks/useAudioContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { AppSettings, Difficulty, IrishDialect } from '../types';
 import {
