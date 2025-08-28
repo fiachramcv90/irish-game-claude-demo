@@ -55,26 +55,39 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
 
   // Initialize mobile audio system
   useEffect(() => {
+    let mounted = true;
+
     const initializeMobile = async () => {
       try {
         await MobileAudioUtils.initialize();
+
+        if (!mounted) return; // Prevent state updates after unmount
+
         setIsOptimized(true);
 
         // Initial state check
         updateUnlockState();
 
-        // Set up periodic updates to track unlock state changes
-        updateTimeoutRef.current = window.setInterval(updateUnlockState, 1000);
+        // Set up periodic updates with longer interval (improved performance)
+        updateTimeoutRef.current = window.setInterval(() => {
+          if (mounted) {
+            updateUnlockState();
+          }
+        }, 2500); // Increased from 1s to 2.5s for better performance
       } catch (error) {
-        console.error('Failed to initialize mobile audio:', error);
+        if (mounted) {
+          console.error('Failed to initialize mobile audio:', error);
+        }
       }
     };
 
     initializeMobile();
 
     return () => {
+      mounted = false;
       if (updateTimeoutRef.current) {
         window.clearInterval(updateTimeoutRef.current);
+        updateTimeoutRef.current = undefined;
       }
     };
   }, [updateUnlockState]);
@@ -82,7 +95,9 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
   // Handle mobile-specific events
   useEffect(() => {
     const handleLowMemory = () => {
-      console.log('📱 Low memory detected - mobile audio cleanup triggered');
+      if (import.meta.env.DEV) {
+        console.log('📱 Low memory detected - mobile audio cleanup triggered');
+      }
       // Trigger cleanup event for AudioManager
       window.dispatchEvent(
         new CustomEvent('audio:cleanup', {
@@ -92,7 +107,9 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
     };
 
     const handleOrientationChange = () => {
-      console.log('📱 Orientation changed - checking audio context');
+      if (import.meta.env.DEV) {
+        console.log('📱 Orientation changed - checking audio context');
+      }
       // Small delay to allow orientation change to complete
       setTimeout(() => {
         updateUnlockState();
@@ -104,12 +121,16 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
     };
 
     const handleBackground = () => {
-      console.log('📱 App backgrounded - pausing audio operations');
+      if (import.meta.env.DEV) {
+        console.log('📱 App backgrounded - pausing audio operations');
+      }
       window.dispatchEvent(new CustomEvent('audio:background'));
     };
 
     const handleForeground = () => {
-      console.log('📱 App foregrounded - resuming audio operations');
+      if (import.meta.env.DEV) {
+        console.log('📱 App foregrounded - resuming audio operations');
+      }
       window.dispatchEvent(new CustomEvent('audio:foreground'));
       updateUnlockState();
     };
@@ -141,9 +162,13 @@ export function useMobileAudio(): MobileAudioState & MobileAudioActions {
       updateUnlockState();
 
       if (success) {
-        console.log('🔓 Mobile audio unlocked successfully');
+        if (import.meta.env.DEV) {
+          console.log('🔓 Mobile audio unlocked successfully');
+        }
       } else {
-        console.warn('⚠️ Mobile audio unlock failed');
+        if (import.meta.env.DEV) {
+          console.warn('⚠️ Mobile audio unlock failed');
+        }
       }
 
       return success;

@@ -60,10 +60,14 @@ export const AudioButton: React.FC<AudioButtonProps> = ({
     try {
       // Handle mobile audio unlock first
       if (needsUnlock) {
-        console.log('🔓 Attempting to unlock mobile audio...');
+        if (import.meta.env.DEV) {
+          console.log('🔓 Attempting to unlock mobile audio...');
+        }
         const unlocked = await unlockAudio();
         if (!unlocked) {
-          console.warn('❌ Failed to unlock audio on mobile device');
+          if (import.meta.env.DEV) {
+            console.warn('❌ Failed to unlock audio on mobile device');
+          }
           setButtonState('error');
           return;
         }

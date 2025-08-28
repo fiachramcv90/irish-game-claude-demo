@@ -51,13 +51,20 @@ export class MobileAudioDetector {
   }
 
   private static isMobileDevice(): boolean {
+    // Feature detection first (more reliable than user agent sniffing)
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen =
+      window.innerWidth <= 768 && window.innerHeight <= 1024;
+
+    // Fallback to user agent detection for broader compatibility
     const userAgent = navigator.userAgent.toLowerCase();
-    return (
+    const userAgentMobile =
       /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
         userAgent
-      ) ||
-      (window.innerWidth <= 768 && window.innerHeight <= 1024)
-    );
+      );
+
+    // Combine feature detection with user agent and screen size
+    return hasTouch && (isSmallScreen || userAgentMobile);
   }
 
   private static isIOSDevice(): boolean {
@@ -187,7 +194,9 @@ export class TouchUnlockManager {
 
       if (success) {
         this.unlockState.isUnlocked = true;
-        console.log('🔓 Audio successfully unlocked for mobile device');
+        if (import.meta.env.DEV) {
+          console.log('🔓 Audio successfully unlocked for mobile device');
+        }
 
         // Notify all waiting resolvers
         this.unlockResolvers.forEach(resolve => resolve(true));
@@ -323,7 +332,9 @@ export class MobilePerformanceOptimizer {
     this.setupVisibilityHandling();
 
     this.isOptimized = true;
-    console.log('🚀 Mobile audio optimizations applied');
+    if (import.meta.env.DEV) {
+      console.log('🚀 Mobile audio optimizations applied');
+    }
   }
 
   private static setupMemoryManagement(): void {
