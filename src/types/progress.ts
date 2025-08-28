@@ -203,6 +203,7 @@ export interface DetailedGameSession {
   score: number;
   maxScore: number;
   normalizedScore: number; // 0-100% accounting for difficulty
+  longestStreak: number; // longest consecutive correct answers in this session
 
   // Detailed response tracking
   responses: DetailedGameResponse[];

@@ -11,17 +11,18 @@ import type {
   ComparisonOperator,
   RuleCondition,
 } from '../types/achievement';
-import type {
+import {
   CURRENT_PROGRESS_VERSION,
-  ConfidenceLevel,
-  DetailedGameSession,
-  LearningMetrics,
-  MasteryLevel,
-  ProgressDataValidation,
-  ProgressDataVersion,
-  ValidationError,
-  ValidationWarning,
-  VocabularyMasteryData,
+  type ConfidenceLevel,
+  type DetailedGameResponse,
+  type DetailedGameSession,
+  type LearningMetrics,
+  type MasteryLevel,
+  type ProgressDataValidation,
+  type ProgressDataVersion,
+  type ValidationError,
+  type ValidationWarning,
+  type VocabularyMasteryData,
 } from '../types/progress';
 
 /**
@@ -852,7 +853,7 @@ export class ProgressDataValidator {
       'letter-recognition',
       'sound-game',
     ];
-    if (!validTypes.includes(value)) {
+    if (!validTypes.includes(value as GameType)) {
       this.addError(
         field,
         value,
@@ -869,7 +870,7 @@ export class ProgressDataValidator {
       'letters',
       'basic-phrases',
     ];
-    if (!validCategories.includes(value)) {
+    if (!validCategories.includes(value as Category)) {
       this.addError(
         field,
         value,
@@ -880,7 +881,7 @@ export class ProgressDataValidator {
 
   private validateDifficulty(value: unknown, field: string): void {
     const validDifficulties: Difficulty[] = [1, 2, 3, 4, 5];
-    if (!validDifficulties.includes(value)) {
+    if (!validDifficulties.includes(value as Difficulty)) {
       this.addError(
         field,
         value,
@@ -898,7 +899,7 @@ export class ProgressDataValidator {
   }
 
   private validateGameResponse(
-    response: Record<string, unknown>,
+    response: DetailedGameResponse,
     path: string
   ): void {
     this.validateString(response.itemId, `${path}.itemId`, { required: true });
@@ -914,6 +915,29 @@ export class ProgressDataValidator {
     this.validateDate(response.timestamp, `${path}.timestamp`, {
       required: true,
     });
+
+    // Validate vocabulary item
+    this.validateVocabularyItem(
+      response.vocabularyItem,
+      `${path}.vocabularyItem`
+    );
+
+    // Validate additional fields specific to DetailedGameResponse
+    this.validateNumber(response.thinkingTime, `${path}.thinkingTime`, {
+      min: 0,
+    });
+    this.validateNumber(response.hintsUsed, `${path}.hintsUsed`, {
+      min: 0,
+      integer: true,
+    });
+    this.validateNumber(response.questionNumber, `${path}.questionNumber`, {
+      min: 1,
+      integer: true,
+    });
+    this.validateDifficulty(
+      response.difficultyLevel,
+      `${path}.difficultyLevel`
+    );
   }
 
   private validateVersion(version: ProgressDataVersion): void {
@@ -956,7 +980,7 @@ export class ProgressDataValidator {
       session.vocabulary.forEach(item => vocabularyIds.add(item.id));
     });
 
-    progressModel.vocabularyMastery.forEach((masteryData, itemId) => {
+    progressModel.vocabularyMastery.forEach((_, itemId) => {
       if (!vocabularyIds.has(itemId)) {
         this.addWarning(
           'vocabularyMastery',
@@ -1063,7 +1087,7 @@ export function sanitizeProgressData(data: unknown): unknown {
       } else {
         const result: Record<string, unknown> = {};
         Object.keys(obj).forEach(key => {
-          result[key] = convertDates(obj[key]);
+          result[key] = convertDates((obj as Record<string, unknown>)[key]);
         });
         return result;
       }

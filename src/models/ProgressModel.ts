@@ -1,21 +1,22 @@
 // Progress Data Models for Issue #29
 // Business logic and data models for progress tracking
 
-import type { UserProgress, VocabularyItem } from '../types';
+import type { GameType, UserProgress, VocabularyItem } from '../types';
 import type {
   AchievementDefinition,
   AchievementProgress,
   AchievementStatistics,
 } from '../types/achievement';
-import type {
+import {
   CURRENT_PROGRESS_VERSION,
-  ConfidenceLevel,
-  DetailedGameSession,
-  LearningMetrics,
-  MasteryLevel,
-  MistakeType,
-  ProgressDataVersion,
-  VocabularyMasteryData,
+  type ConfidenceLevel,
+  type DetailedGameSession,
+  type GameContext,
+  type LearningMetrics,
+  type MasteryLevel,
+  type MistakeType,
+  type ProgressDataVersion,
+  type VocabularyMasteryData,
 } from '../types/progress';
 
 /**
@@ -142,11 +143,11 @@ export class ProgressModel {
     // Add performance history entry
     masteryData.performanceHistory.push({
       date: new Date(),
-      gameType: response.gameType || 'card-match',
+      gameType: (response.gameType as GameType) || 'card-match',
       wasCorrect: response.isCorrect,
       responseTime: response.responseTime || 0,
       hintsUsed: response.hintsUsed || 0,
-      context: response.gameContext || {
+      context: (response.gameContext as GameContext) || {
         sessionId: '',
         position: 0,
         previousAccuracy: 0,
