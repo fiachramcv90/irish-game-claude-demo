@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { useAudio } from '../contexts/AudioContext';
 import { useProgress } from '../contexts/ProgressContext';
+import { useAudio } from '../hooks/useAudioContext';
 import type { GameType } from '../types';
 
 import { GameCard } from './game';

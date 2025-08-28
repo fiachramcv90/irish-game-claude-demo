@@ -1,6 +1,5 @@
 import React, {
   createContext,
-  useContext,
   useCallback,
   useEffect,
   useReducer,
@@ -8,13 +7,15 @@ import React, {
 } from 'react';
 
 import { AudioErrorToast } from '../components/AudioErrorToast';
-import type { AudioContextType, AudioManager, AudioLoadState } from '../types';
+import type { AudioContextType, AudioLoadState } from '../types';
+import type { AudioManagerInterface } from '../types/audio';
 import type { AudioError, AudioErrorState } from '../types/audio-errors';
 import { audioErrorHandler } from '../utils/AudioErrorHandler';
+import { AudioManager } from '../utils/AudioManager';
 import { audioManifestManager } from '../utils/AudioManifestManager';
 
 interface AudioState {
-  manager: AudioManager;
+  manager: AudioManagerInterface;
   loadingStates: Map<string, AudioLoadState>;
   errorState: AudioErrorState;
   isInitialized: boolean;
@@ -31,13 +32,16 @@ type AudioAction =
   | { type: 'CLEAR_ERROR'; errorId?: string }
   | { type: 'SET_RECOVERING'; isRecovering: boolean };
 
+// Create AudioManager instance
+const audioManager = new AudioManager({
+  defaultVolume: 0.8,
+  maxConcurrentAudio: 4,
+  enableCrossfade: true,
+  fadeDuration: 300,
+});
+
 const initialState: AudioState = {
-  manager: {
-    preloadedAudio: new Map(),
-    currentlyPlaying: undefined,
-    volume: 0.8,
-    isMuted: false,
-  },
+  manager: audioManager,
   loadingStates: new Map(),
   errorState: {
     hasError: false,
@@ -51,31 +55,22 @@ const initialState: AudioState = {
 function audioReducer(state: AudioState, action: AudioAction): AudioState {
   switch (action.type) {
     case 'SET_VOLUME':
-      return {
-        ...state,
-        manager: {
-          ...state.manager,
-          volume: action.volume,
-        },
-      };
+      // Use AudioManager method instead of state manipulation
+      state.manager.setMasterVolume(action.volume);
+      return state; // AudioManager handles the state internally
 
     case 'TOGGLE_MUTE':
-      return {
-        ...state,
-        manager: {
-          ...state.manager,
-          isMuted: !state.manager.isMuted,
-        },
-      };
+      // Use AudioManager method instead of state manipulation
+      if (state.manager.isMuted()) {
+        state.manager.unmute();
+      } else {
+        state.manager.mute();
+      }
+      return state; // AudioManager handles the state internally
 
     case 'SET_CURRENT_AUDIO':
-      return {
-        ...state,
-        manager: {
-          ...state.manager,
-          currentlyPlaying: action.audio,
-        },
-      };
+      // This action may no longer be needed with AudioManager
+      return state;
 
     case 'SET_LOADING_STATE': {
       const newLoadingStates = new Map(state.loadingStates);
@@ -87,15 +82,8 @@ function audioReducer(state: AudioState, action: AudioAction): AudioState {
     }
 
     case 'ADD_PRELOADED_AUDIO': {
-      const newPreloadedAudio = new Map(state.manager.preloadedAudio);
-      newPreloadedAudio.set(action.id, action.audio);
-      return {
-        ...state,
-        manager: {
-          ...state.manager,
-          preloadedAudio: newPreloadedAudio,
-        },
-      };
+      // AudioManager handles loading internally now
+      return state;
     }
 
     case 'INITIALIZE':
@@ -166,43 +154,22 @@ export function AudioProvider({ children }: AudioProviderProps) {
   const playAudio = useCallback(
     async (audioId: string): Promise<void> => {
       try {
-        // Stop current audio if playing
-        if (state.manager.currentlyPlaying) {
-          state.manager.currentlyPlaying.pause();
-          state.manager.currentlyPlaying.currentTime = 0;
-        }
-
-        // Get audio element from preloaded or load it if not available
-        let audio = state.manager.preloadedAudio.get(audioId);
-
-        if (!audio) {
-          // Load audio file using AudioManifestManager if not preloaded
+        // Check if audio is already loaded, if not load it first
+        if (!state.manager.isLoaded(audioId)) {
           const loadResult = await audioManifestManager.loadAudioFile(audioId);
 
-          if (!loadResult.success || !loadResult.audioElement) {
+          if (!loadResult.success || !loadResult.fileUsed) {
             throw new Error(
               `Failed to load audio "${audioId}": ${loadResult.error}`
             );
           }
 
-          audio = loadResult.audioElement;
-          dispatch({ type: 'ADD_PRELOADED_AUDIO', id: audioId, audio });
+          // Load the audio file into AudioManager
+          await state.manager.load(audioId, loadResult.fileUsed);
         }
 
-        // Set volume
-        const effectiveVolume = state.manager.isMuted
-          ? 0
-          : state.manager.volume;
-        audio.volume = effectiveVolume;
-
-        // Play audio
-        dispatch({ type: 'SET_CURRENT_AUDIO', audio });
-        await audio.play();
-
-        // Clear current audio when finished
-        audio.onended = () => {
-          dispatch({ type: 'SET_CURRENT_AUDIO', audio: undefined });
-        };
+        // Play audio using AudioManager
+        await state.manager.play(audioId);
       } catch (error) {
         const audioError = audioErrorHandler.createError(
           error instanceof Error ? error : new Error('Failed to play audio'),
@@ -213,7 +180,6 @@ export function AudioProvider({ children }: AudioProviderProps) {
         );
 
         dispatch({ type: 'ADD_ERROR', error: audioError });
-        dispatch({ type: 'SET_CURRENT_AUDIO', audio: undefined });
 
         // Show toast for non-critical errors
         if (audioError.severity !== 'CRITICAL') {
@@ -223,147 +189,111 @@ export function AudioProvider({ children }: AudioProviderProps) {
         console.error(`Failed to play audio ${audioId}:`, error);
       }
     },
-    [
-      state.manager.currentlyPlaying,
-      state.manager.preloadedAudio,
-      state.manager.isMuted,
-      state.manager.volume,
-    ]
+    [state.manager]
   );
 
   const preloadAudio = useCallback(
     async (audioIds: string[]): Promise<void> => {
-      const promises = audioIds.map(async id => {
-        if (state.manager.preloadedAudio.has(id)) {
-          return; // Already preloaded
+      try {
+        // Initialize AudioManifestManager if needed
+        if (!audioManifestManager.getManifest()) {
+          await audioManifestManager.loadManifest();
         }
 
-        try {
-          // Initialize AudioManifestManager if needed
-          if (!audioManifestManager.getManifest()) {
-            await audioManifestManager.loadManifest();
+        // Build audio URL map from manifest
+        const audioUrls: Record<string, string> = {};
+        for (const id of audioIds) {
+          if (!state.manager.isLoaded(id)) {
+            const fileInfo = audioManifestManager.getAudioFileById(id);
+            const fileUrl = fileInfo
+              ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
+              : `audio/${id}.mp3`;
+            audioUrls[id] = fileUrl;
+
+            dispatch({
+              type: 'SET_LOADING_STATE',
+              id,
+              state: {
+                id,
+                url: fileUrl,
+                isLoaded: false,
+                isLoading: true,
+              },
+            });
           }
+        }
 
-          // Get file info to determine the actual URL
-          const fileInfo = audioManifestManager.getAudioFileById(id);
-          const fileUrl = fileInfo
-            ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
-            : `audio/${id}.mp3`;
+        // Use AudioManager's preload functionality
+        if (Object.keys(audioUrls).length > 0) {
+          await state.manager.preload(audioUrls);
+        }
 
-          dispatch({
-            type: 'SET_LOADING_STATE',
-            id,
-            state: {
+        // Update loading states to completed
+        for (const id of audioIds) {
+          if (audioUrls[id]) {
+            dispatch({
+              type: 'SET_LOADING_STATE',
               id,
-              url: fileUrl,
-              isLoaded: false,
-              isLoading: true,
-            },
-          });
-
-          // Try to load audio using AudioManifestManager
-          const loadResult = await audioManifestManager.loadAudioFile(id);
-
-          if (!loadResult.success || !loadResult.audioElement) {
-            throw new Error(loadResult.error || 'Failed to load audio file');
+              state: {
+                id,
+                url: audioUrls[id],
+                isLoaded: true,
+                isLoading: false,
+              },
+            });
           }
+        }
+      } catch (error) {
+        const audioError = audioErrorHandler.createError(
+          error instanceof Error ? error : new Error('Failed to preload audio'),
+          {
+            operation: 'preloadAudio',
+          }
+        );
 
-          const audio = loadResult.audioElement;
+        dispatch({ type: 'ADD_ERROR', error: audioError });
 
-          dispatch({ type: 'ADD_PRELOADED_AUDIO', id, audio });
+        // Update loading states to error for failed items
+        for (const id of audioIds) {
           dispatch({
             type: 'SET_LOADING_STATE',
             id,
             state: {
               id,
-              url: loadResult.fileUsed || fileUrl,
-              isLoaded: true,
-              isLoading: false,
-            },
-          });
-        } catch (error) {
-          const audioError = audioErrorHandler.createError(
-            error instanceof Error
-              ? error
-              : new Error('Failed to preload audio'),
-            {
-              audioId: id,
-              operation: 'preloadAudio',
-            }
-          );
-
-          dispatch({ type: 'ADD_ERROR', error: audioError });
-
-          // Get file info for error state URL
-          const fileInfo = audioManifestManager.getAudioFileById(id);
-          const fileUrl = fileInfo
-            ? Object.values(fileInfo.files)[0] || `audio/${id}.mp3`
-            : `audio/${id}.mp3`;
-
-          dispatch({
-            type: 'SET_LOADING_STATE',
-            id,
-            state: {
-              id,
-              url: fileUrl,
+              url: '',
               isLoaded: false,
               isLoading: false,
               error: audioError.userMessage || audioError.message,
             },
           });
-
-          // Show toast for medium/high severity errors
-          if (
-            audioError.severity === 'MEDIUM' ||
-            audioError.severity === 'HIGH'
-          ) {
-            setToastErrors(prev => [...prev, audioError]);
-          }
-
-          console.error(`Failed to preload audio ${id}:`, error);
         }
-      });
 
-      await Promise.allSettled(promises);
+        // Show toast for medium/high severity errors
+        if (
+          audioError.severity === 'MEDIUM' ||
+          audioError.severity === 'HIGH'
+        ) {
+          setToastErrors(prev => [...prev, audioError]);
+        }
+
+        console.error('Failed to preload audio:', error);
+      }
     },
-    [state.manager.preloadedAudio]
+    [state.manager]
   );
 
   const stopAll = useCallback(() => {
-    if (state.manager.currentlyPlaying) {
-      state.manager.currentlyPlaying.pause();
-      state.manager.currentlyPlaying.currentTime = 0;
-      dispatch({ type: 'SET_CURRENT_AUDIO', audio: undefined });
-    }
-  }, [state.manager.currentlyPlaying]);
+    state.manager.stopAll();
+  }, [state.manager]);
 
-  const setVolume = useCallback(
-    (volume: number) => {
-      const clampedVolume = Math.max(0, Math.min(1, volume));
-      dispatch({ type: 'SET_VOLUME', volume: clampedVolume });
-
-      // Update current audio volume if playing
-      if (state.manager.currentlyPlaying) {
-        const effectiveVolume = state.manager.isMuted ? 0 : clampedVolume;
-        state.manager.currentlyPlaying.volume = effectiveVolume;
-      }
-    },
-    [state.manager.currentlyPlaying, state.manager.isMuted]
-  );
+  const setVolume = useCallback((volume: number) => {
+    const clampedVolume = Math.max(0, Math.min(1, volume));
+    dispatch({ type: 'SET_VOLUME', volume: clampedVolume });
+  }, []);
 
   const toggleMute = useCallback(() => {
     dispatch({ type: 'TOGGLE_MUTE' });
-
-    // Update current audio volume if playing
-    if (state.manager.currentlyPlaying) {
-      const effectiveVolume = !state.manager.isMuted ? 0 : state.manager.volume;
-      state.manager.currentlyPlaying.volume = effectiveVolume;
-    }
-  }, [
-    state.manager.currentlyPlaying,
-    state.manager.isMuted,
-    state.manager.volume,
-  ]);
+  }, []);
 
   const clearErrors = useCallback(() => {
     dispatch({ type: 'CLEAR_ERROR' });
@@ -426,13 +356,14 @@ export function AudioProvider({ children }: AudioProviderProps) {
     playAudio,
     preloadAudio,
     stopAll,
-    volume: state.manager.volume,
+    volume: state.manager.getMasterVolume(),
     setVolume,
-    isMuted: state.manager.isMuted,
+    isMuted: state.manager.isMuted(),
     toggleMute,
     errorState: state.errorState,
     clearErrors,
     retryFailedAudio,
+    audioManager: state.manager,
   };
 
   return (
@@ -449,12 +380,4 @@ export function AudioProvider({ children }: AudioProviderProps) {
       ))}
     </AudioContext.Provider>
   );
-}
-
-export function useAudio(): AudioContextType {
-  const context = useContext(AudioContext);
-  if (!context) {
-    throw new Error('useAudio must be used within an AudioProvider');
-  }
-  return context;
 }
